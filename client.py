@@ -3,6 +3,10 @@
 import socket
 import threading
 import time
+from datetime import datetime
+
+# Packet types
+CHAT_MESSAGE = 1
 
 host = '127.0.0.1'
 port = 12345
@@ -14,8 +18,13 @@ def main():
     thread = threading.Thread(target=readloop, args=(s,))
     thread.start()
     while True:
-        message = format("Time elapsed: %f seconds" %(time.time() - start_time))
-        s.sendall(message.encode("utf-8"))
+        message = format("The time is %s" %datetime.now().strftime("%I:%M:%S %p"))
+        packet_len = len(message) + 5
+        packet = packet_len.to_bytes(4, byteorder="big")
+        packet_type = 1
+        packet += packet_type.to_bytes(1)
+        packet += message.encode("utf-8")
+        s.sendall(packet)
         time.sleep(60)
 
 def readloop(s):
