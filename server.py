@@ -25,7 +25,6 @@ def readloop(client_socket):
             data = client_socket.recv(1024)
         except socker.error as e:
             print(e)
-        finally:
             client_socket.close()
             clients.remove(client_socket)
             done = True
@@ -42,7 +41,6 @@ def readloop(client_socket):
                 client.sendall(data)
             except socket.error as e:
                 print(e)
-            finally:
                 client.close()
                 clients.remove(client)
 
