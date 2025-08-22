@@ -16,16 +16,17 @@ def main():
 
     while True:
         client_socket, client_address = server_socket.accept()
-        thread = threading.Thread(target=readloop, args=(client_socket,))
         clients.append(client_socket)
+        client_name = format("Client-%d" %len(clients))
+        thread = threading.Thread(target=readloop, args=(client_socket,client_name))
         thread.start()
 
-def readloop(client_socket):
+def readloop(client_socket, client_name):
     done = False
     while not done:
         try:
             data = client_socket.recv(1024)
-        except socker.error as e:
+        except socket.error as e:
             print(e)
             client_socket.close()
             clients.remove(client_socket)
@@ -34,13 +35,12 @@ def readloop(client_socket):
         if len(data) == 0:
             continue
 
-        print("Received: %s" %data.decode("utf-8"))
+        message = format("%s: %s" %(client_name, data.decode("utf-8")))
+        print(message)
 
         for client in clients:
-            if client == client_socket:
-                continue
             try:
-                client.sendall(data)
+                client.sendall(message.encode("utf-8"))
             except socket.error as e:
                 print(e)
                 client.close()
