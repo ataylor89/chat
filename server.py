@@ -15,12 +15,38 @@ def main():
     while True:
         client_socket, client_address = server_socket.accept()
         thread = threading.Thread(target=readloop, args=(client_socket,))
-        clients.append(thread)
+        clients.append(client_socket)
         thread.start()
 
 def readloop(client_socket):
-    data = client_socket.recv(1024)
-    print("Received: %s" %data.decode("utf-8"))
+    done = False
+    while not done:
+        try:
+            data = client_socket.recv(1024)
+        except socker.error as e:
+            print(e)
+        finally:
+            client_socket.close()
+            clients.remove(client_socket)
+            done = True
+
+        if len(data) == 0:
+            continue
+
+        print("Received: %s" %data.decode("utf-8"))
+        print("type(data) = %s" %type(data))
+        print("len(data) = %d" %len(data))
+
+        for client in clients:
+            if client == client_socket:
+                continue
+            try:
+                client.sendall(data)
+            except socket.error as e:
+                print(e)
+            finally:
+                client.close()
+                clients.remove(client)
 
 if __name__ == "__main__":
     main()
