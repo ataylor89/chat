@@ -1,3 +1,5 @@
+# This is also a work in progress and eventually I will create a gui for the client
+
 import socket
 
 host = '127.0.0.1'
