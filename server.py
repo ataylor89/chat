@@ -45,8 +45,6 @@ def readloop(client_socket, client_name):
                 client.sendall(message.encode("utf-8"))
             except socket.error as e:
                 print(e)
-                client.close()
-                clients.remove(client)
 
 if __name__ == "__main__":
     main()
