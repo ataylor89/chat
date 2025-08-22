@@ -34,8 +34,6 @@ def readloop(client_socket):
             continue
 
         print("Received: %s" %data.decode("utf-8"))
-        print("type(data) = %s" %type(data))
-        print("len(data) = %d" %len(data))
 
         for client in clients:
             if client == client_socket:
