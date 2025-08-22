@@ -13,11 +13,13 @@ def main():
     server_socket.bind((host, port))
 
     server_socket.listen()
+    i = 0
 
     while True:
         client_socket, client_address = server_socket.accept()
         clients.append(client_socket)
-        client_name = format("Client-%d" %len(clients))
+        i += 1
+        client_name = format("Client-%d" %i)
         thread = threading.Thread(target=readloop, args=(client_socket,client_name))
         thread.start()
 
