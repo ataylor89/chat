@@ -39,12 +39,14 @@ def readloop(client_socket, client_name):
 
         message = format("%s: %s" %(client_name, data.decode("utf-8")))
         print(message)
+        echo(message)
 
-        for client in clients:
-            try:
-                client.sendall(message.encode("utf-8"))
-            except socket.error as e:
-                print(e)
+def echo(message):
+    for client in clients:
+        try:
+            client.sendall(message.encode("utf-8"))
+        except socket.error as e:
+            print(e)
 
 if __name__ == "__main__":
     main()
