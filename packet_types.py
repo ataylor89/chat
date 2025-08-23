@@ -1,0 +1,3 @@
+REGISTER = 1
+LOGIN = 2
+MESSAGE = 3
