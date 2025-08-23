@@ -25,8 +25,7 @@ def main():
     while True:
         client_socket, client_address = server_socket.accept()
         client_id += 1
-        client_name = format("Client-%d" %client_id)
-        clients[client_id] = {"client_name": client_name, "client_socket": client_socket, "client_address": client_address}
+        clients[client_id] = {"client_name": format("Client-%d" %client_id), "client_socket": client_socket, "client_address": client_address}
         thread = threading.Thread(target=readloop, args=(client_id,))
         thread.start()
 
