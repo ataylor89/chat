@@ -9,6 +9,7 @@ from datetime import datetime
 
 clients = {}
 users = {}
+logged_in_users = []
 
 def main():
     load_user_db()
@@ -41,7 +42,8 @@ def save_user_db(path="users.pickle"):
             pickle.dump(users, file)
 
 def readloop(client_id):
-    client_socket = clients[client_id]["client_socket"]
+    client = clients[client_id]
+    client_socket = client["client_socket"]
     done = False
     while not done:
         try:
@@ -57,6 +59,9 @@ def readloop(client_id):
         except socket.error as e:
             print(e)
             client_socket.close()
+            if "username" in client:
+                username = client["username"]
+                logged_in_users.remove(username)
             del clients[client_id]
             done = True
 
@@ -102,14 +107,15 @@ def handle_login(packet, client_id):
         return
     username = parts[0]
     password = parts[1]
-    if username in users and password == users[username]["password"]:
+    if username in users and password == users[username]["password"] and username not in logged_in_users:
         client["username"] = username
         print("Client %d successfully logged in as %s" %(client_id, username))
         message = format("Successfully logged in as %s\n" %username)
         client_socket.sendall(message.encode("utf-8"))
+        logged_in_users.append(username)
     else:
-        print("The login packet from client %d does not have a correct password" %client_id)
-        client_socket.sendall("Message from server: The password is incorrect\n".encode("utf-8"))
+        print("Client %d was unable to login" %client_id)
+        client_socket.sendall("Message from server: Unable to login\n".encode("utf-8"))
         return
 
 def handle_message(packet, client_id):
