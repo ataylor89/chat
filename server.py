@@ -124,7 +124,7 @@ def handle_message(packet, client_id):
     client = clients[client_id]
     username = client["username"] if "username" in client else client["client_name"]
     message = format("%s: %s\n" %(username, packet[5:packet_len].decode("utf-8")))
-    print(message)
+    print(message, end="")
     echo(message)
 
 def echo(message):
