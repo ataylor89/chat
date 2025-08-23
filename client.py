@@ -10,7 +10,6 @@ host = "127.0.0.1"
 port = 12345
 
 def main():
-    start_time = time.time()
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((host, port))
     thread = threading.Thread(target=readloop, args=(s,))
