@@ -7,6 +7,9 @@ import pickle
 import os
 from datetime import datetime
 
+host = "127.0.0.1"
+port = 12345
+
 clients = {}
 users = {}
 logged_in_users = []
@@ -14,11 +17,10 @@ logged_in_users = []
 def main():
     load_user_db()
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    host = '127.0.0.1'
-    port = 12345
     server_socket.bind((host, port))
+    listen(server_socket)
 
+def listen(server_socket):
     server_socket.listen()
     client_id = 0
 
