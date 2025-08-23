@@ -23,7 +23,7 @@ def main():
         message = format("The time is %s" %datetime.now().strftime("%I:%M:%S %p"))
         packet_len = len(message) + 5
         packet = packet_len.to_bytes(4, byteorder="big")
-        packet_type = 3
+        packet_type = packet_types.MESSAGE
         packet += packet_type.to_bytes(1)
         packet += message.encode("utf-8")
         s.sendall(packet)
