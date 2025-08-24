@@ -26,9 +26,16 @@ def listen():
     while True:
         client_socket, client_address = server_socket.accept()
         client_id += 1
-        clients[client_id] = {"client_name": format("Client-%d" %client_id), "client_socket": client_socket, "client_address": client_address}
+        create_client(client_id, client_socket, client_address)
         thread = threading.Thread(target=readloop, args=(client_id,))
         thread.start()
+
+def create_client(client_id, client_socket, client_address):
+    clients[client_id] = {
+        "client_name": format("Client-%d" %client_id),
+        "client_socket": client_socket,
+        "client_address": client_address
+    }
 
 def load_user_db(path="users.pickle"):
     if os.path.exists(path):
