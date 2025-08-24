@@ -1,5 +1,6 @@
 # This is a work in progress
 
+import pio
 import packet_types
 import socket
 import threading
@@ -46,21 +47,14 @@ def readloop(client_id):
     done = False
     while not done:
         try:
-            data = client_socket.recv(4)
-            if len(data) < 4:
-                continue
-            packet_len = int.from_bytes(data, byteorder="big", signed=False)
-            packet = data + client_socket.recv(packet_len-4)
-            if len(packet) == packet_len:
+            packet = pio.read_packet(client_socket)
+            if packet:
                 process(packet, client_id)
-            else:
-                print("The packet is shorter than the specified length")
         except socket.error as e:
             print(e)
             client_socket.close()
             if "username" in client:
-                username = client["username"]
-                logged_in_users.remove(username)
+                logged_in_users.remove(client["username"])
             del clients[client_id]
             done = True
 
@@ -81,19 +75,21 @@ def handle_registration(packet, client_id):
     parts = packet[5:packet_len].decode("utf-8").split(":", 1)
     if len(parts) != 2:
         print("The registration packet from client %s does not meet the required format" %client["client_name"])
-        client_socket.sendall("Message from server: The registration packet does not meet the required format\n".encode("utf-8"))
+        message = "Message from server: The registration packet does not meet the required format\n"
+        pio.write_packet(client_socket, packet_types.REGISTER, message)
         return
     username = parts[0]
     password = parts[1]
     if username in users:
         print("Unable to register username %s because it is already taken" %username)
-        client_socket.sendall("Message from server: The username is already taken\n".encode("utf-8"))
+        message = "Message from server: The username is already taken\n"
+        pio.write_packet(client_socket, packet_types.REGISTER, message)
     else:
         users[username] = {"password": password, "registration_dt": datetime.now()}
         save_user_db()
-        message = format("Message from server: The username %s was successfully registered" %username)
         print("The username %s was successfully registered\n" %username)
-        client_socket.sendall(message.encode("utf-8"))
+        message = format("Message from server: The username %s was successfully registered" %username)
+        pio.write_packet(client_socket, packet_types.REGISTER, message)
 
 def handle_login(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -102,7 +98,8 @@ def handle_login(packet, client_id):
     parts = packet[5:packet_len].decode("utf-8").split(":", 1)
     if len(parts) != 2:
         print("The login packet from client %s does not meet the required format" %client["client_name"])
-        client_socket.sendall("Message from server: The login packet does not meet the required format\n".encode("utf-8"))
+        message = "Message from server: The login packet does not meet the required format\n"
+        pio.write_packet(client_socket, packet_types.LOGIN, message)
         return
     username = parts[0]
     password = parts[1]
@@ -110,11 +107,12 @@ def handle_login(packet, client_id):
         client["username"] = username
         print("Client %d successfully logged in as %s" %(client_id, username))
         message = format("Successfully logged in as %s\n" %username)
-        client_socket.sendall(message.encode("utf-8"))
+        pio.write_packet(client_socket, packet_types.LOGIN, message)
         logged_in_users.append(username)
     else:
         print("Client %d was unable to login" %client_id)
-        client_socket.sendall("Message from server: Unable to login\n".encode("utf-8"))
+        message = "Message from server: Unable to login\n"
+        pio.write_packet(client_socket, packet_types.LOGIN, message)
         return
 
 def handle_message(packet, client_id):
@@ -127,10 +125,9 @@ def handle_message(packet, client_id):
 
 def echo(message):
     for client_id in clients:
-        client = clients[client_id]
-        client_socket = client["client_socket"]
+        client_socket = clients[client_id]["client_socket"]
         try:
-            client_socket.sendall(message.encode("utf-8"))
+            pio.write_packet(client_socket, packet_types.MESSAGE, message)
         except socket.error as e:
             print(e)
 
