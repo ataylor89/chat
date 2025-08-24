@@ -1,7 +1,7 @@
 # This is also a work in progress and eventually I will create a gui for the client
 
 import pio
-import packet_types
+import ptypes
 import socket
 import threading
 import time
@@ -19,16 +19,16 @@ def main():
     login(s, "ktm5124", "testpassword")
     while True:
         message = format("The time is %s" %datetime.now().strftime("%I:%M:%S %p"))
-        pio.write_packet(s, packet_types.MESSAGE, message)
+        pio.write_packet(s, ptypes.MESSAGE, message)
         time.sleep(60)
 
 def login(s, username, password):
     message = username + ":" + password
-    pio.write_packet(s, packet_types.LOGIN, message)
+    pio.write_packet(s, ptypes.LOGIN, message)
 
 def register(s, username, password):
     message = username + ":" + password
-    pio.write_packet(s, packet_types.REGISTER, message)
+    pio.write_packet(s, ptypes.REGISTER, message)
 
 def readloop(s):
     done = False

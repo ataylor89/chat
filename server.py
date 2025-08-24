@@ -1,7 +1,7 @@
 # This is a work in progress
 
 import pio
-import packet_types
+import ptypes
 import socket
 import threading
 import pickle
@@ -61,11 +61,11 @@ def readloop(client_id):
 def process(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
     packet_type = packet[4]
-    if packet_type == packet_types.REGISTER:
+    if packet_type == ptypes.REGISTER:
         handle_registration(packet, client_id)
-    elif packet_type == packet_types.LOGIN:
+    elif packet_type == ptypes.LOGIN:
         handle_login(packet, client_id)
-    elif packet_type == packet_types.MESSAGE:
+    elif packet_type == ptypes.MESSAGE:
         handle_message(packet, client_id)
 
 def handle_registration(packet, client_id):
@@ -76,20 +76,20 @@ def handle_registration(packet, client_id):
     if len(parts) != 2:
         print("The registration packet from client %s does not meet the required format" %client["client_name"])
         message = "Message from server: The registration packet does not meet the required format\n"
-        pio.write_packet(client_socket, packet_types.REGISTER, message)
+        pio.write_packet(client_socket, ptypes.REGISTER, message)
         return
     username = parts[0]
     password = parts[1]
     if username in users:
         print("Unable to register username %s because it is already taken" %username)
         message = "Message from server: The username is already taken\n"
-        pio.write_packet(client_socket, packet_types.REGISTER, message)
+        pio.write_packet(client_socket, ptypes.REGISTER, message)
     else:
         users[username] = {"password": password, "registration_dt": datetime.now()}
         save_user_db()
         print("The username %s was successfully registered\n" %username)
         message = format("Message from server: The username %s was successfully registered" %username)
-        pio.write_packet(client_socket, packet_types.REGISTER, message)
+        pio.write_packet(client_socket, ptypes.REGISTER, message)
 
 def handle_login(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -99,7 +99,7 @@ def handle_login(packet, client_id):
     if len(parts) != 2:
         print("The login packet from client %s does not meet the required format" %client["client_name"])
         message = "Message from server: The login packet does not meet the required format\n"
-        pio.write_packet(client_socket, packet_types.LOGIN, message)
+        pio.write_packet(client_socket, ptypes.LOGIN, message)
         return
     username = parts[0]
     password = parts[1]
@@ -107,12 +107,12 @@ def handle_login(packet, client_id):
         client["username"] = username
         print("Client %d successfully logged in as %s" %(client_id, username))
         message = format("Successfully logged in as %s\n" %username)
-        pio.write_packet(client_socket, packet_types.LOGIN, message)
+        pio.write_packet(client_socket, ptypes.LOGIN, message)
         logged_in_users.append(username)
     else:
         print("Client %d was unable to login" %client_id)
         message = "Message from server: Unable to login\n"
-        pio.write_packet(client_socket, packet_types.LOGIN, message)
+        pio.write_packet(client_socket, ptypes.LOGIN, message)
         return
 
 def handle_message(packet, client_id):
@@ -127,7 +127,7 @@ def echo(message):
     for client_id in clients:
         client_socket = clients[client_id]["client_socket"]
         try:
-            pio.write_packet(client_socket, packet_types.MESSAGE, message)
+            pio.write_packet(client_socket, ptypes.MESSAGE, message)
         except socket.error as e:
             print(e)
 
