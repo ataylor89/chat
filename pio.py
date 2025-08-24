@@ -6,8 +6,6 @@ def read_packet(s):
     packet = header + s.recv(packet_len-4)
     if len(packet) == packet_len:
         return packet
-    else:
-        return None
 
 def write_packet(s, packet_type, message):
     body = packet_type.to_bytes(1) + message.encode("utf-8")
