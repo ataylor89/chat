@@ -81,9 +81,10 @@ def process(packet, client_id):
 def handle_exchange_public_key(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
     client = clients[client_id]
+    client_name = client["client_name"]
     client_socket = client["client_socket"]
     client_public_key = packet[5:packet_len].decode("utf-8")
-    print("The client's public key is %s" %client_public_key)
+    print("%s's public key is %s" %(client_name, client_public_key))
     client["public_key"] = parser.decode(client_public_key)
     server_public_key = parser.parse_key("rsa/publickey.txt")
     server_public_key_enc = parser.encode(server_public_key)
@@ -116,10 +117,11 @@ def handle_registration(packet, client_id):
 def handle_login(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
     client = clients[client_id]
+    client_name = client["client_name"]
     client_socket = client["client_socket"]
     parts = packet[5:packet_len].decode("utf-8").split(":", 1)
     if len(parts) != 2:
-        print("The login packet from client %s does not meet the required format" %client["client_name"])
+        print("The login packet from %s does not meet the required format" %client_name)
         message = "Message from server: The login packet does not meet the required format"
         packet_io.write_packet(client_socket, packet_types.LOGIN, message)
         return
@@ -127,12 +129,12 @@ def handle_login(packet, client_id):
     password = parts[1]
     if username in users and password == users[username]["password"] and username not in logged_in_users:
         client["username"] = username
-        print("Client %d successfully logged in as %s" %(client_id, username))
+        print("%s successfully logged in as %s" %(client_name, username))
         message = format("Successfully logged in as %s" %username)
         packet_io.write_packet(client_socket, packet_types.LOGIN, message)
         logged_in_users.append(username)
     else:
-        print("Client %d was unable to login" %client_id)
+        print("%s was unable to login" %client_name)
         message = "Message from server: Unable to login"
         packet_io.write_packet(client_socket, packet_types.LOGIN, message)
         return
