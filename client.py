@@ -19,9 +19,9 @@ def main():
     s.connect((host, port))
     thread = threading.Thread(target=readloop, args=(s,))
     thread.start()
+    exchange_public_key(s)
     register(s, "ktm5124", "testpassword")
     login(s, "ktm5124", "testpassword")
-    exchange_public_key(s)
     while True:
         message = format("The time is %s" %datetime.now().strftime("%I:%M:%S %p"))
         packet_io.write_packet(s, packet_types.MESSAGE, message)
