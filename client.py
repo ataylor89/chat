@@ -1,7 +1,7 @@
 # This is also a work in progress and eventually I will create a gui for the client
 
-import pio
-import ptypes
+import packet_io
+import packet_types
 import socket
 import threading
 import time
@@ -24,7 +24,7 @@ def main():
     exchange_public_key(s)
     while True:
         message = format("The time is %s" %datetime.now().strftime("%I:%M:%S %p"))
-        pio.write_packet(s, ptypes.MESSAGE, message)
+        packet_io.write_packet(s, packet_types.MESSAGE, message)
         time.sleep(60)
 
 def parse_keys():
@@ -33,23 +33,23 @@ def parse_keys():
 
 def register(s, username, password):
     message = username + ":" + password
-    pio.write_packet(s, ptypes.REGISTER, message)
+    packet_io.write_packet(s, packet_types.REGISTER, message)
 
 def login(s, username, password):
     message = username + ":" + password
-    pio.write_packet(s, ptypes.LOGIN, message)
+    packet_io.write_packet(s, packet_types.LOGIN, message)
 
 def exchange_public_key(s):
     client_public_key = keys["client"]["public"]
     client_public_key_enc = parser.encode(client_public_key)
     print("The client's public key is %s" %client_public_key_enc)
-    pio.write_packet(s, ptypes.EXCHANGE_PUBLIC_KEY, client_public_key_enc)
+    packet_io.write_packet(s, packet_types.EXCHANGE_PUBLIC_KEY, client_public_key_enc)
 
 def readloop(s):
     done = False
     while not done:
         try:
-            packet = pio.read_packet(s)
+            packet = packet_io.read_packet(s)
             if packet:
                 process(packet)
         except socket.error as e:
@@ -60,13 +60,13 @@ def readloop(s):
 def process(packet):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
     packet_type = packet[4]
-    if packet_type == ptypes.EXCHANGE_PUBLIC_KEY:
+    if packet_type == packet_types.EXCHANGE_PUBLIC_KEY:
         handle_exchange_public_key(packet)
-    elif packet_type == ptypes.REGISTER:
+    elif packet_type == packet_types.REGISTER:
         handle_register(packet)
-    elif packet_type == ptypes.LOGIN:
+    elif packet_type == packet_types.LOGIN:
         handle_login(packet)
-    elif packet_type == ptypes.MESSAGE:
+    elif packet_type == packet_types.MESSAGE:
         handle_message(packet)
 
 def handle_exchange_public_key(packet):
