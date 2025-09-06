@@ -8,23 +8,42 @@ import time
 from datetime import datetime
 from rsa import parser
 
-host = "127.0.0.1"
-port = 12345
+settings = {
+    "host": "127.0.0.1",
+    "port": 12345,
+    "encryption": False
+}
 
-keys = {"client": {}, "server": {}}
+keys = {
+    "client": {
+        "public": None,
+        "private": None
+    }, 
+    "server": {
+        "public": None,
+        "private": None
+    }
+}
 
 def main():
     parse_keys()
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((host, port))
+    s.connect((settings["host"], settings["port"]))
     thread = threading.Thread(target=readloop, args=(s,))
     thread.start()
     exchange_public_key(s)
+    while not settings["encryption"]:
+        time.sleep(1)
     register(s, "ktm5124", "testpassword")
     login(s, "ktm5124", "testpassword")
     while True:
         message = format("The time is %s" %datetime.now().strftime("%I:%M:%S %p"))
-        packet_io.write_packet(s, packet_types.MESSAGE, message)
+        packet_io.write_packet(
+            s, 
+            packet_types.MESSAGE, 
+            message,
+            key=keys["server"]["public"],
+            encryption=settings["encryption"])
         time.sleep(60)
 
 def parse_keys():
@@ -33,23 +52,38 @@ def parse_keys():
 
 def register(s, username, password):
     message = username + ":" + password
-    packet_io.write_packet(s, packet_types.REGISTER, message)
+    packet_io.write_packet(
+        s, 
+        packet_types.REGISTER, 
+        message,
+        key=keys["server"]["public"],
+        encryption=settings["encryption"])
 
 def login(s, username, password):
     message = username + ":" + password
-    packet_io.write_packet(s, packet_types.LOGIN, message)
+    packet_io.write_packet(
+        s, 
+        packet_types.LOGIN, 
+        message,
+        key=keys["server"]["public"],
+        encryption=settings["encryption"])
 
 def exchange_public_key(s):
     client_public_key = keys["client"]["public"]
-    client_public_key_enc = parser.encode(client_public_key)
-    print("The client's public key is %s" %client_public_key_enc)
-    packet_io.write_packet(s, packet_types.EXCHANGE_PUBLIC_KEY, client_public_key_enc)
+    client_public_key = parser.encode(client_public_key)
+    print("The client's public key is %s" %client_public_key)
+    packet_io.write_packet(
+        s, 
+        packet_types.EXCHANGE_PUBLIC_KEY, 
+        client_public_key,
+        key=keys["server"]["public"],
+        encryption=settings["encryption"])
 
 def readloop(s):
     done = False
     while not done:
         try:
-            packet = packet_io.read_packet(s)
+            packet = packet_io.read_packet(s, key=keys["client"]["private"], encryption=settings["encryption"])
             if packet:
                 process(packet)
         except socket.error as e:
@@ -71,9 +105,10 @@ def process(packet):
 
 def handle_exchange_public_key(packet):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-    server_public_key_enc = packet[5:packet_len].decode("utf-8")
-    print("The server's public key is %s" %server_public_key_enc)
-    keys["server"]["public"] = parser.decode(server_public_key_enc)
+    server_public_key = packet[5:packet_len].decode("utf-8")
+    print("The server's public key is %s" %server_public_key)
+    keys["server"]["public"] = parser.decode(server_public_key)
+    settings["encryption"] = True
 
 def handle_register(packet):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)

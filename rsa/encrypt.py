@@ -1,5 +1,5 @@
-import parser
-import util
+from rsa import parser
+from rsa import util
 import sys
 
 def encrypt(msg, key):

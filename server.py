@@ -14,8 +14,10 @@ port = 12345
 clients = {}
 users = {}
 logged_in_users = []
+rsa_keys = {}
 
 def main():
+    parse_keys()
     load_user_db()
     listen()
 
@@ -35,8 +37,14 @@ def create_client(client_id, client_socket, client_address):
     clients[client_id] = {
         "client_name": format("Client-%d" %client_id),
         "client_socket": client_socket,
-        "client_address": client_address
+        "client_address": client_address,
+        "public_key": None,
+        "encryption": False
     }
+
+def parse_keys():
+    rsa_keys["public"] = parser.parse_key("rsa/publickey.txt")
+    rsa_keys["private"] = parser.parse_key("rsa/privatekey.txt")
 
 def load_user_db(path="users.pickle"):
     if os.path.exists(path):
@@ -55,7 +63,7 @@ def readloop(client_id):
     done = False
     while not done:
         try:
-            packet = packet_io.read_packet(client_socket)
+            packet = packet_io.read_packet(client_socket, key=rsa_keys["private"], encryption=client["encryption"])
             if packet:
                 process(packet, client_id)
         except socket.error as e:
@@ -89,7 +97,13 @@ def handle_exchange_public_key(packet, client_id):
     server_public_key = parser.parse_key("rsa/publickey.txt")
     server_public_key_enc = parser.encode(server_public_key)
     print("The server's public key is %s" %server_public_key_enc)
-    packet_io.write_packet(client_socket, packet_types.EXCHANGE_PUBLIC_KEY, server_public_key_enc)
+    packet_io.write_packet(
+        client_socket, 
+        packet_types.EXCHANGE_PUBLIC_KEY, 
+        server_public_key_enc, 
+        key=client["public_key"], 
+        encryption=client["encryption"])
+    client["encryption"] = True
 
 def handle_registration(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -99,20 +113,35 @@ def handle_registration(packet, client_id):
     if len(parts) != 2:
         print("The registration packet from client %s does not meet the required format" %client["client_name"])
         message = "Message from server: The registration packet does not meet the required format"
-        packet_io.write_packet(client_socket, packet_types.REGISTER, message)
+        packet_io.write_packet(
+            client_socket, 
+            packet_types.REGISTER, 
+            message, 
+            key=client["public_key"], 
+            encryption=client["encryption"])
         return
     username = parts[0]
     password = parts[1]
     if username in users:
         print("Unable to register username %s because it is already taken" %username)
         message = "Message from server: The username is already taken"
-        packet_io.write_packet(client_socket, packet_types.REGISTER, message)
+        packet_io.write_packet(
+            client_socket, 
+            packet_types.REGISTER, 
+            message,
+            key=client["public_key"],
+            encryption=client["encryption"])
     else:
         users[username] = {"password": password, "registration_dt": datetime.now()}
         save_user_db()
         print("The username %s was successfully registered" %username)
         message = format("Message from server: The username %s was successfully registered" %username)
-        packet_io.write_packet(client_socket, packet_types.REGISTER, message)
+        packet_io.write_packet(
+            client_socket, 
+            packet_types.REGISTER, 
+            message,
+            key=client["public_key"],
+            encryption=client["encryption"])
 
 def handle_login(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -123,7 +152,12 @@ def handle_login(packet, client_id):
     if len(parts) != 2:
         print("The login packet from %s does not meet the required format" %client_name)
         message = "Message from server: The login packet does not meet the required format"
-        packet_io.write_packet(client_socket, packet_types.LOGIN, message)
+        packet_io.write_packet(
+            client_socket, 
+            packet_types.LOGIN, 
+            message,
+            key=client["public_key"],
+            encryption=client["encryption"])
         return
     username = parts[0]
     password = parts[1]
@@ -131,12 +165,22 @@ def handle_login(packet, client_id):
         client["username"] = username
         print("%s successfully logged in as %s" %(client_name, username))
         message = format("Successfully logged in as %s" %username)
-        packet_io.write_packet(client_socket, packet_types.LOGIN, message)
+        packet_io.write_packet(
+            client_socket, 
+            packet_types.LOGIN, 
+            message,
+            key=client["public_key"],
+            encryption=client["encryption"])
         logged_in_users.append(username)
     else:
         print("%s was unable to login" %client_name)
         message = "Message from server: Unable to login"
-        packet_io.write_packet(client_socket, packet_types.LOGIN, message)
+        packet_io.write_packet(
+            client_socket, 
+            packet_types.LOGIN, 
+            message,
+            key=client["public_key"],
+            encryption=client["encryption"])
         return
 
 def handle_message(packet, client_id):
@@ -149,9 +193,15 @@ def handle_message(packet, client_id):
 
 def echo(message):
     for client_id in clients:
-        client_socket = clients[client_id]["client_socket"]
+        client = clients[client_id]
+        client_socket = client["client_socket"]
         try:
-            packet_io.write_packet(client_socket, packet_types.MESSAGE, message)
+            packet_io.write_packet(
+                client_socket, 
+                packet_types.MESSAGE, 
+                message,
+                key=client["public_key"],
+                encryption=client["encryption"])
         except socket.error as e:
             print(e)
 
