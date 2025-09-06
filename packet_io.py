@@ -24,9 +24,7 @@ def read_packet(s, key=None, encryption=False):
 
 def write_packet(s, packet_type, message, key=None, encryption=False):
     if encryption:
-        body = message.encode("utf-8")
-        body = body.decode("utf-8")
-        body = encrypt.encrypt(body, key)
+        body = encrypt.encrypt(message, key)
         body = body.encode("utf-8")
         packet_len = len(body) + 5
         header = packet_len.to_bytes(4, byteorder="big") + packet_type.to_bytes(1)
