@@ -56,12 +56,15 @@ class Application(tk.Tk):
 
     def handle_return(self, event):
         message = self.dm_ta.get("1.0", tk.END)
-        encryption_key = self.keys["server"]["public"]
-        packet_io.write_packet(self.s, 
-            packet_types.MESSAGE, 
-            message,
-            key=encryption_key,
-            encryption=self.use_encryption)
+        if self.is_command(message):
+            self.process_command(message)
+        else:
+            encryption_key = self.keys["server"]["public"]
+            packet_io.write_packet(self.s, 
+                packet_types.MESSAGE, 
+                message,
+                key=encryption_key,
+                encryption=self.use_encryption)
         self.dm_ta.delete("1.0", tk.END)
         return "break"
 
@@ -155,6 +158,23 @@ class Application(tk.Tk):
         message = packet[5:packet_len].decode("utf-8")
         self.chat_ta.insert(tk.END, message)
 
+    def is_command(self, message):
+        commandlist = ["/register", "/login"]
+        tokens = message.split(" ")
+        if tokens[0].startswith("/") and tokens[0] in commandlist:
+            return True
+
+    def process_command(self, message):
+        tokens = message.strip().split(" ")
+        if tokens[0] == "/register" and len(tokens) == 3:
+            username = tokens[1]
+            password = tokens[2]
+            self.register(username, password)
+        elif tokens[0] == "/login" and len(tokens) == 3:
+            username = tokens[1]
+            password = tokens[2]
+            self.login(username, password)
+
 def main():
     config = configparser.ConfigParser()
     config.read("settings.ini")
@@ -165,8 +185,6 @@ def main():
     app.exchange_public_key()
     while not app.use_encryption:
         time.sleep(1)
-    app.register("ktm5124", "testpassword")
-    app.login("ktm5124", "testpassword")
     app.mainloop()
 
 if __name__ == "__main__":
