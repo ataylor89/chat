@@ -112,7 +112,7 @@ def handle_registration(packet, client_id):
     parts = packet[5:packet_len].decode("utf-8").split(":", 1)
     if len(parts) != 2:
         print("The registration packet from client %s does not meet the required format" %client["client_name"])
-        message = "Message from server: The registration packet does not meet the required format"
+        message = "Server: The registration packet does not meet the required format\n"
         packet_io.write_packet(
             client_socket, 
             packet_types.REGISTER, 
@@ -124,7 +124,7 @@ def handle_registration(packet, client_id):
     password = parts[1]
     if username in users:
         print("Unable to register username %s because it is already taken" %username)
-        message = "Message from server: The username is already taken"
+        message = format("Server: The username %s is already taken\n" %username)
         packet_io.write_packet(
             client_socket, 
             packet_types.REGISTER, 
@@ -135,7 +135,7 @@ def handle_registration(packet, client_id):
         users[username] = {"password": password, "registration_dt": datetime.now()}
         save_user_db()
         print("The username %s was successfully registered" %username)
-        message = format("Message from server: The username %s was successfully registered" %username)
+        message = format("Server: The username %s was successfully registered\n" %username)
         packet_io.write_packet(
             client_socket, 
             packet_types.REGISTER, 
@@ -151,7 +151,7 @@ def handle_login(packet, client_id):
     parts = packet[5:packet_len].decode("utf-8").split(":", 1)
     if len(parts) != 2:
         print("The login packet from %s does not meet the required format" %client_name)
-        message = "Message from server: The login packet does not meet the required format"
+        message = "Server: The login packet does not meet the required format\n"
         packet_io.write_packet(
             client_socket, 
             packet_types.LOGIN, 
@@ -164,7 +164,7 @@ def handle_login(packet, client_id):
     if username in users and password == users[username]["password"] and username not in logged_in_users:
         client["username"] = username
         print("%s successfully logged in as %s" %(client_name, username))
-        message = format("Successfully logged in as %s" %username)
+        message = format("Server: Successfully logged in as %s\n" %username)
         packet_io.write_packet(
             client_socket, 
             packet_types.LOGIN, 
@@ -174,7 +174,7 @@ def handle_login(packet, client_id):
         logged_in_users.append(username)
     else:
         print("%s was unable to login" %client_name)
-        message = "Message from server: Unable to login"
+        message = "Server: Unable to login\n"
         packet_io.write_packet(
             client_socket, 
             packet_types.LOGIN, 
@@ -188,7 +188,7 @@ def handle_message(packet, client_id):
     client = clients[client_id]
     username = client["username"] if "username" in client else client["client_name"]
     message = format("%s: %s" %(username, packet[5:packet_len].decode("utf-8")))
-    print(message)
+    print(message, end="")
     echo(message)
 
 def echo(message):

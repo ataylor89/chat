@@ -1,5 +1,5 @@
-# This is also a work in progress and eventually I will create a gui for the client
-
+import tkinter as tk
+from tkinter.scrolledtext import ScrolledText
 import packet_io
 import packet_types
 import socket
@@ -8,122 +8,172 @@ import time
 from datetime import datetime
 from rsa import parser
 
-settings = {
-    "host": "127.0.0.1",
-    "port": 12345,
-    "encryption": False
-}
+class Application(tk.Tk):
+    def __init__(self):
+        tk.Tk.__init__(self)
+        self.title("Chat client")
+        self.frame = tk.Frame(self)
+        self.frame.pack(fill="both", expand=True)
+        self.create_widgets()
+        self.protocol("WM_DELETE_WINDOW", self.handle_close)
+        self.settings = {
+            "host": "127.0.0.1",
+            "port": 12345,
+            "encryption": False
+        }
+        self.keys = {
+            "client": {
+                "public": None,
+                "private": None
+            },
+            "server": {
+                "public": None,
+                "private": None
+            }
+        }
 
-keys = {
-    "client": {
-        "public": None,
-        "private": None
-    }, 
-    "server": {
-        "public": None,
-        "private": None
-    }
-}
+    def create_widgets(self):
+        self.chat_ta = ScrolledText(self.frame,
+            width=80,
+            height=30,
+            wrap="word", 
+            bg="blue",
+            fg="white",
+            font=("SF Mono Regular", 16))
+        self.chat_ta.grid(column=0, row=0)
+        self.chat_ta.bind("<Key>", self.handle_key_press)
+        self.dm_ta = ScrolledText(self.frame,
+            width=80,
+            height=6,
+            wrap="word", 
+            bg="blue",
+            fg="white",
+            font=("SF Mono Regular", 16))
+        self.dm_ta.bind("<Return>", self.handle_return)
+        self.dm_ta.grid(column=0, row=1)
 
-def main():
-    parse_keys()
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((settings["host"], settings["port"]))
-    thread = threading.Thread(target=readloop, args=(s,))
-    thread.start()
-    exchange_public_key(s)
-    while not settings["encryption"]:
-        time.sleep(1)
-    register(s, "ktm5124", "testpassword")
-    login(s, "ktm5124", "testpassword")
-    while True:
-        message = format("The time is %s" %datetime.now().strftime("%I:%M:%S %p"))
-        packet_io.write_packet(
-            s, 
+    def handle_key_press(self, event):
+        return "break"
+
+    def handle_return(self, event):
+        message = self.dm_ta.get("1.0", tk.END)
+        encryption_key = self.keys["server"]["public"]
+        use_encryption = self.settings["encryption"]
+        packet_io.write_packet(self.s, 
             packet_types.MESSAGE, 
             message,
-            key=keys["server"]["public"],
-            encryption=settings["encryption"])
-        time.sleep(60)
+            key=encryption_key,
+            encryption=use_encryption)
+        self.dm_ta.delete("1.0", tk.END)
+        return "break"
 
-def parse_keys():
-    keys["client"]["public"] = parser.parse_key("rsa/publickey.txt")
-    keys["client"]["private"] = parser.parse_key("rsa/privatekey.txt")
+    def handle_close(self):
+        self.quit()
+        self.destroy()
 
-def register(s, username, password):
-    message = username + ":" + password
-    packet_io.write_packet(
-        s, 
-        packet_types.REGISTER, 
-        message,
-        key=keys["server"]["public"],
-        encryption=settings["encryption"])
+    def parse_keys(self):
+        self.keys["client"]["public"] = parser.parse_key("rsa/publickey.txt")
+        self.keys["client"]["private"] = parser.parse_key("rsa/privatekey.txt")
 
-def login(s, username, password):
-    message = username + ":" + password
-    packet_io.write_packet(
-        s, 
-        packet_types.LOGIN, 
-        message,
-        key=keys["server"]["public"],
-        encryption=settings["encryption"])
+    def connect(self):
+        host = self.settings["host"]
+        port = self.settings["port"]
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.connect((host, port))
 
-def exchange_public_key(s):
-    client_public_key = keys["client"]["public"]
-    client_public_key = parser.encode(client_public_key)
-    print("The client's public key is %s" %client_public_key)
-    packet_io.write_packet(
-        s, 
-        packet_types.EXCHANGE_PUBLIC_KEY, 
-        client_public_key,
-        key=keys["server"]["public"],
-        encryption=settings["encryption"])
+    def start_readloop(self):
+        self.readloop_thread = threading.Thread(target=self.readloop)
+        self.readloop_thread.start()
 
-def readloop(s):
-    done = False
-    while not done:
-        try:
-            packet = packet_io.read_packet(s, key=keys["client"]["private"], encryption=settings["encryption"])
-            if packet:
-                process(packet)
-        except socket.error as e:
-            print(e)
-            s.close()
-            done = True
+    def register(self, username, password):
+        message = username + ":" + password
+        encryption_key = self.keys["server"]["public"]
+        use_encryption = self.settings["encryption"]
+        packet_io.write_packet(self.s, 
+            packet_types.REGISTER, 
+            message,
+            key=encryption_key,
+            encryption=use_encryption)
 
-def process(packet):
-    packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-    packet_type = packet[4]
-    if packet_type == packet_types.EXCHANGE_PUBLIC_KEY:
-        handle_exchange_public_key(packet)
-    elif packet_type == packet_types.REGISTER:
-        handle_register(packet)
-    elif packet_type == packet_types.LOGIN:
-        handle_login(packet)
-    elif packet_type == packet_types.MESSAGE:
-        handle_message(packet)
+    def login(self, username, password):
+        message = username + ":" + password
+        encryption_key = self.keys["server"]["public"]
+        use_encryption = self.settings["encryption"]
+        packet_io.write_packet(self.s, 
+            packet_types.LOGIN, 
+            message,
+            key=encryption_key,
+            encryption=use_encryption)
 
-def handle_exchange_public_key(packet):
-    packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-    server_public_key = packet[5:packet_len].decode("utf-8")
-    print("The server's public key is %s" %server_public_key)
-    keys["server"]["public"] = parser.decode(server_public_key)
-    settings["encryption"] = True
+    def exchange_public_key(self):
+        client_public_key = self.keys["client"]["public"]
+        client_public_key = parser.encode(client_public_key)
+        encryption_key = self.keys["server"]["public"]
+        use_encryption = self.settings["encryption"]
+        packet_io.write_packet(self.s, 
+            packet_types.EXCHANGE_PUBLIC_KEY, 
+            client_public_key,
+            key=encryption_key,
+            encryption=use_encryption)
 
-def handle_register(packet):
-    packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-    message = packet[5:packet_len].decode("utf-8")
-    print(message)
+    def readloop(self):
+        done = False
+        while not done:
+            try:
+                decryption_key = self.keys["client"]["private"]
+                use_encryption = self.settings["encryption"]
+                packet = packet_io.read_packet(self.s, key=decryption_key, encryption=use_encryption)
+                if packet:
+                    self.process(packet)
+            except socket.error as e:
+                print(e)
+                self.s.close()
+                done = True
 
-def handle_login(packet):
-    packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-    message = packet[5:packet_len].decode("utf-8")
-    print(message)
+    def process(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        packet_type = packet[4]
+        if packet_type == packet_types.EXCHANGE_PUBLIC_KEY:
+            self.handle_exchange_public_key(packet)
+        elif packet_type == packet_types.REGISTER:
+            self.handle_register(packet)
+        elif packet_type == packet_types.LOGIN:
+            self.handle_login(packet)
+        elif packet_type == packet_types.MESSAGE:
+            self.handle_message(packet)
 
-def handle_message(packet):
-    packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-    message = packet[5:packet_len].decode("utf-8")
-    print(message)
+    def handle_exchange_public_key(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        server_public_key = packet[5:packet_len].decode("utf-8")
+        self.keys["server"]["public"] = parser.decode(server_public_key)
+        self.settings["encryption"] = True
+
+    def handle_register(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.chat_ta.insert(tk.END, message)
+
+    def handle_login(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.chat_ta.insert(tk.END, message)
+
+    def handle_message(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.chat_ta.insert(tk.END, message)
+
+def main():
+    app = Application()
+    app.parse_keys()
+    app.connect()
+    app.start_readloop()
+    app.exchange_public_key()
+    while not app.settings["encryption"]:
+        time.sleep(1)
+    app.register("ktm5124", "testpassword")
+    app.login("ktm5124", "testpassword")
+    app.mainloop()
 
 if __name__ == "__main__":
     main()
