@@ -7,17 +7,18 @@ import threading
 import time
 from datetime import datetime
 from rsa import parser
+import configparser
 
 class Application(tk.Tk):
-    def __init__(self):
+    def __init__(self, config):
         tk.Tk.__init__(self)
-        self.title("Chat client")
+        self.title(config["default"]["title"])
         self.protocol("WM_DELETE_WINDOW", self.handle_close)
         self.frame = tk.Frame(self)
         self.frame.pack(fill="both", expand=True)
-        self.create_widgets()
-        self.host = "127.0.0.1"
-        self.port = 12345
+        self.create_widgets(config)
+        self.host = config["default"]["host"]
+        self.port = int(config["default"]["port"])
         self.use_encryption = False
         self.keys = {
             "client": {
@@ -30,23 +31,23 @@ class Application(tk.Tk):
             }
         }
 
-    def create_widgets(self):
+    def create_widgets(self, config):
         self.chat_ta = ScrolledText(self.frame,
             width=80,
             height=30,
             wrap="word", 
-            bg="blue",
-            fg="white",
-            font=("SF Mono Regular", 16))
+            bg=config["default"]["bg"],
+            fg=config["default"]["fg"],
+            font=(config["default"]["fontname"], int(config["default"]["fontsize"])))
         self.chat_ta.grid(column=0, row=0)
         self.chat_ta.bind("<Key>", self.handle_key_press)
         self.dm_ta = ScrolledText(self.frame,
             width=80,
             height=6,
-            wrap="word", 
-            bg="blue",
-            fg="white",
-            font=("SF Mono Regular", 16))
+            wrap="word",
+            bg=config["default"]["bg"],
+            fg=config["default"]["fg"],
+            font=(config["default"]["fontname"], int(config["default"]["fontsize"])))
         self.dm_ta.bind("<Return>", self.handle_return)
         self.dm_ta.grid(column=0, row=1)
 
@@ -155,7 +156,9 @@ class Application(tk.Tk):
         self.chat_ta.insert(tk.END, message)
 
 def main():
-    app = Application()
+    config = configparser.ConfigParser()
+    config.read("settings.ini")
+    app = Application(config)
     app.parse_keys()
     app.connect()
     app.start_readloop()
