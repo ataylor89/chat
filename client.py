@@ -12,15 +12,13 @@ class Application(tk.Tk):
     def __init__(self):
         tk.Tk.__init__(self)
         self.title("Chat client")
+        self.protocol("WM_DELETE_WINDOW", self.handle_close)
         self.frame = tk.Frame(self)
         self.frame.pack(fill="both", expand=True)
         self.create_widgets()
-        self.protocol("WM_DELETE_WINDOW", self.handle_close)
-        self.settings = {
-            "host": "127.0.0.1",
-            "port": 12345,
-            "encryption": False
-        }
+        self.host = "127.0.0.1"
+        self.port = 12345
+        self.use_encryption = False
         self.keys = {
             "client": {
                 "public": None,
@@ -58,12 +56,11 @@ class Application(tk.Tk):
     def handle_return(self, event):
         message = self.dm_ta.get("1.0", tk.END)
         encryption_key = self.keys["server"]["public"]
-        use_encryption = self.settings["encryption"]
         packet_io.write_packet(self.s, 
             packet_types.MESSAGE, 
             message,
             key=encryption_key,
-            encryption=use_encryption)
+            encryption=self.use_encryption)
         self.dm_ta.delete("1.0", tk.END)
         return "break"
 
@@ -76,10 +73,8 @@ class Application(tk.Tk):
         self.keys["client"]["private"] = parser.parse_key("rsa/privatekey.txt")
 
     def connect(self):
-        host = self.settings["host"]
-        port = self.settings["port"]
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.connect((host, port))
+        self.s.connect((self.host, self.port))
 
     def start_readloop(self):
         self.readloop_thread = threading.Thread(target=self.readloop)
@@ -88,41 +83,37 @@ class Application(tk.Tk):
     def register(self, username, password):
         message = username + ":" + password
         encryption_key = self.keys["server"]["public"]
-        use_encryption = self.settings["encryption"]
         packet_io.write_packet(self.s, 
             packet_types.REGISTER, 
             message,
             key=encryption_key,
-            encryption=use_encryption)
+            encryption=self.use_encryption)
 
     def login(self, username, password):
         message = username + ":" + password
         encryption_key = self.keys["server"]["public"]
-        use_encryption = self.settings["encryption"]
         packet_io.write_packet(self.s, 
             packet_types.LOGIN, 
             message,
             key=encryption_key,
-            encryption=use_encryption)
+            encryption=self.use_encryption)
 
     def exchange_public_key(self):
         client_public_key = self.keys["client"]["public"]
         client_public_key = parser.encode(client_public_key)
         encryption_key = self.keys["server"]["public"]
-        use_encryption = self.settings["encryption"]
         packet_io.write_packet(self.s, 
             packet_types.EXCHANGE_PUBLIC_KEY, 
             client_public_key,
             key=encryption_key,
-            encryption=use_encryption)
+            encryption=self.use_encryption)
 
     def readloop(self):
         done = False
         while not done:
             try:
                 decryption_key = self.keys["client"]["private"]
-                use_encryption = self.settings["encryption"]
-                packet = packet_io.read_packet(self.s, key=decryption_key, encryption=use_encryption)
+                packet = packet_io.read_packet(self.s, key=decryption_key, encryption=self.use_encryption)
                 if packet:
                     self.process(packet)
             except socket.error as e:
@@ -146,7 +137,7 @@ class Application(tk.Tk):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         server_public_key = packet[5:packet_len].decode("utf-8")
         self.keys["server"]["public"] = parser.decode(server_public_key)
-        self.settings["encryption"] = True
+        self.use_encryption = True
 
     def handle_register(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -169,7 +160,7 @@ def main():
     app.connect()
     app.start_readloop()
     app.exchange_public_key()
-    while not app.settings["encryption"]:
+    while not app.use_encryption:
         time.sleep(1)
     app.register("ktm5124", "testpassword")
     app.login("ktm5124", "testpassword")
