@@ -160,7 +160,7 @@ class Application(tk.Tk):
 
     def is_command(self, message):
         commandlist = ["/register", "/login"]
-        tokens = message.split(" ")
+        tokens = message.strip().split(" ")
         if tokens[0].startswith("/") and tokens[0] in commandlist:
             return True
 
