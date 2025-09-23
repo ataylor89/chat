@@ -120,6 +120,14 @@ class Application(tk.Tk):
             key=encryption_key,
             encryption=self.use_encryption)
 
+    def get_time(self, format=None):
+        encryption_key = self.keys["server"]["public"]
+        packet_io.write_packet(self.s,
+            packet_types.TIME,
+            format,
+            key=encryption_key,
+            encryption=self.use_encryption)
+
     def readloop(self):
         done = False
         while not done:
@@ -146,6 +154,8 @@ class Application(tk.Tk):
             self.handle_message(packet)
         elif packet_type == packet_types.DATE:
             self.handle_date(packet)
+        elif packet_type == packet_types.TIME:
+            self.handle_time(packet)
 
     def handle_exchange_public_key(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -173,8 +183,13 @@ class Application(tk.Tk):
         message = packet[5:packet_len].decode("utf-8")
         self.chat_ta.insert(tk.END, message)
 
+    def handle_time(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.chat_ta.insert(tk.END, message)
+
     def is_command(self, message):
-        commandlist = ["/register", "/login", "/date"]
+        commandlist = ["/register", "/login", "/date", "/time"]
         tokens = message.strip().split(" ")
         if tokens[0].startswith("/") and tokens[0] in commandlist:
             return True
@@ -195,6 +210,10 @@ class Application(tk.Tk):
             tokens = message.strip().split(maxsplit=1)
             format = tokens[1] if len(tokens) > 1 else None 
             self.get_date(format)
+        elif cmdname == "/time":
+            tokens = message.strip().split(maxsplit=1)
+            format = tokens[1] if len(tokens) > 1 else None
+            self.get_time(format)
 
 def main():
     config = configparser.ConfigParser()

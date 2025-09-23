@@ -89,8 +89,8 @@ def process(packet, client_id):
         handle_date(packet, client_id)
     #elif packet_type == packet_types.DATETIME:
     #    handle_datetime(packet, client_id)
-    #elif packet_type == packet_types.TIME:
-    #    handle_time(packet, client_id)
+    elif packet_type == packet_types.TIME:
+        handle_time(packet, client_id)
 
 def handle_exchange_public_key(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -226,6 +226,25 @@ def handle_date(packet, client_id):
             packet_io.write_packet(
                 client_socket,
                 packet_types.DATE,
+                message,
+                key=encryption_key,
+                encryption=use_encryption)
+        except socket.error as e:
+            print(e)
+
+def handle_time(packet, client_id):
+    packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+    client = clients[client_id]
+    client_socket = client["client_socket"]
+    encryption_key = client["public_key"]
+    use_encryption = client["encryption"]
+    if packet_len == 5:
+        now = datetime.now().astimezone()
+        message = format("Server: The time is %s\n" %now.strftime("%-I:%M %p %Z"))
+        try:
+            packet_io.write_packet(
+                client_socket,
+                packet_types.TIME,
                 message,
                 key=encryption_key,
                 encryption=use_encryption)
