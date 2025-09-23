@@ -24,15 +24,19 @@ def read_packet(s, key=None, encryption=False):
 
 def write_packet(s, packet_type, message, key=None, encryption=False):
     if encryption:
-        body = encrypt.encrypt(message, key)
-        body = body.encode("utf-8")
-        packet_len = len(body) + 5
+        packet_len = 5
+        if message:
+            body = encrypt.encrypt(message, key)
+            body = body.encode("utf-8")
+            packet_len += len(body)
         header = packet_len.to_bytes(4, byteorder="big") + packet_type.to_bytes(1)
-        packet = header + body
+        packet = header + body if message else header
         s.sendall(packet)
     else:
-        body = message.encode("utf-8")
-        packet_len = len(body) + 5
+        packet_len = 5
+        if message:
+            body = message.encode("utf-8")
+            packet_len += len(body)
         header = packet_len.to_bytes(4, byteorder="big") + packet_type.to_bytes(1)
-        packet = header + body
+        packet = header + body if message else header
         s.sendall(packet)

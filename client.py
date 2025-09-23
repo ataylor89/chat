@@ -112,6 +112,14 @@ class Application(tk.Tk):
             key=encryption_key,
             encryption=self.use_encryption)
 
+    def get_date(self, format=None):
+        encryption_key = self.keys["server"]["public"]
+        packet_io.write_packet(self.s,
+            packet_types.DATE,
+            format,
+            key=encryption_key,
+            encryption=self.use_encryption)
+
     def readloop(self):
         done = False
         while not done:
@@ -136,6 +144,8 @@ class Application(tk.Tk):
             self.handle_login(packet)
         elif packet_type == packet_types.MESSAGE:
             self.handle_message(packet)
+        elif packet_type == packet_types.DATE:
+            self.handle_date(packet)
 
     def handle_exchange_public_key(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -158,22 +168,33 @@ class Application(tk.Tk):
         message = packet[5:packet_len].decode("utf-8")
         self.chat_ta.insert(tk.END, message)
 
+    def handle_date(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.chat_ta.insert(tk.END, message)
+
     def is_command(self, message):
-        commandlist = ["/register", "/login"]
+        commandlist = ["/register", "/login", "/date"]
         tokens = message.strip().split(" ")
         if tokens[0].startswith("/") and tokens[0] in commandlist:
             return True
 
     def process_command(self, message):
-        tokens = message.strip().split(" ")
-        if tokens[0] == "/register" and len(tokens) == 3:
+        cmdname = message.strip().split()[0]
+        if cmdname == "/register":
+            tokens = message.strip().split()
             username = tokens[1]
             password = tokens[2]
             self.register(username, password)
-        elif tokens[0] == "/login" and len(tokens) == 3:
+        elif cmdname == "/login":
+            tokens = message.strip().split()
             username = tokens[1]
             password = tokens[2]
             self.login(username, password)
+        elif cmdname == "/date":
+            tokens = message.strip().split(maxsplit=1)
+            format = tokens[1] if len(tokens) > 1 else None 
+            self.get_date(format)
 
 def main():
     config = configparser.ConfigParser()

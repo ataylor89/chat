@@ -1,5 +1,3 @@
-# This is a work in progress
-
 import packet_io
 import packet_types
 import socket
@@ -60,10 +58,12 @@ def save_user_db(path="users.pickle"):
 def readloop(client_id):
     client = clients[client_id]
     client_socket = client["client_socket"]
+    decryption_key = rsa_keys["private"]
     done = False
     while not done:
         try:
-            packet = packet_io.read_packet(client_socket, key=rsa_keys["private"], encryption=client["encryption"])
+            use_encryption = client["encryption"]
+            packet = packet_io.read_packet(client_socket, key=decryption_key, encryption=use_encryption)
             if packet:
                 process(packet, client_id)
         except socket.error as e:
@@ -85,6 +85,12 @@ def process(packet, client_id):
         handle_login(packet, client_id)
     elif packet_type == packet_types.MESSAGE:
         handle_message(packet, client_id)
+    elif packet_type == packet_types.DATE:
+        handle_date(packet, client_id)
+    #elif packet_type == packet_types.DATETIME:
+    #    handle_datetime(packet, client_id)
+    #elif packet_type == packet_types.TIME:
+    #    handle_time(packet, client_id)
 
 def handle_exchange_public_key(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -195,13 +201,34 @@ def echo(message):
     for client_id in clients:
         client = clients[client_id]
         client_socket = client["client_socket"]
+        encryption_key = client["public_key"]
+        use_encryption = client["encryption"]
         try:
             packet_io.write_packet(
                 client_socket, 
                 packet_types.MESSAGE, 
                 message,
-                key=client["public_key"],
-                encryption=client["encryption"])
+                key=encryption_key,
+                encryption=use_encryption)
+        except socket.error as e:
+            print(e)
+
+def handle_date(packet, client_id):
+    packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+    client = clients[client_id]
+    client_socket = client["client_socket"]
+    encryption_key = client["public_key"]
+    use_encryption = client["encryption"]
+    if packet_len == 5:
+        today = datetime.now()
+        message = format("Server: The date is %s\n" %today.strftime("%A, %B %-d, %Y"))
+        try:
+            packet_io.write_packet(
+                client_socket,
+                packet_types.DATE,
+                message,
+                key=encryption_key,
+                encryption=use_encryption)
         except socket.error as e:
             print(e)
 
