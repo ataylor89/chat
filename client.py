@@ -8,6 +8,7 @@ import time
 from datetime import datetime
 from rsa import parser
 import configparser
+import tzlocal
 
 class Application(tk.Tk):
     def __init__(self, config):
@@ -112,19 +113,21 @@ class Application(tk.Tk):
             key=encryption_key,
             encryption=self.use_encryption)
 
-    def get_date(self, format=None):
+    def get_date(self):
         encryption_key = self.keys["server"]["public"]
+        tz_name = tzlocal.get_localzone_name()
         packet_io.write_packet(self.s,
             packet_types.DATE,
-            format,
+            tz_name,
             key=encryption_key,
             encryption=self.use_encryption)
 
     def get_time(self, format=None):
         encryption_key = self.keys["server"]["public"]
+        tz_name = tzlocal.get_localzone_name()
         packet_io.write_packet(self.s,
             packet_types.TIME,
-            format,
+            tz_name,
             key=encryption_key,
             encryption=self.use_encryption)
 
@@ -207,13 +210,9 @@ class Application(tk.Tk):
             password = tokens[2]
             self.login(username, password)
         elif cmdname == "/date":
-            tokens = message.strip().split(maxsplit=1)
-            format = tokens[1] if len(tokens) > 1 else None 
-            self.get_date(format)
+            self.get_date()
         elif cmdname == "/time":
-            tokens = message.strip().split(maxsplit=1)
-            format = tokens[1] if len(tokens) > 1 else None
-            self.get_time(format)
+            self.get_time()
 
 def main():
     config = configparser.ConfigParser()

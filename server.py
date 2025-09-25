@@ -5,6 +5,7 @@ import threading
 import pickle
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from rsa import parser
 
 host = "127.0.0.1"
@@ -87,8 +88,6 @@ def process(packet, client_id):
         handle_message(packet, client_id)
     elif packet_type == packet_types.DATE:
         handle_date(packet, client_id)
-    #elif packet_type == packet_types.DATETIME:
-    #    handle_datetime(packet, client_id)
     elif packet_type == packet_types.TIME:
         handle_time(packet, client_id)
 
@@ -97,37 +96,31 @@ def handle_exchange_public_key(packet, client_id):
     client = clients[client_id]
     client_name = client["client_name"]
     client_socket = client["client_socket"]
-    client_public_key = packet[5:packet_len].decode("utf-8")
-    print("%s's public key is %s" %(client_name, client_public_key))
-    client["public_key"] = parser.decode(client_public_key)
+    client_public_key_enc = packet[5:packet_len].decode("utf-8")
+    client["public_key"] = parser.decode(client_public_key_enc)
     server_public_key = parser.parse_key("rsa/publickey.txt")
     server_public_key_enc = parser.encode(server_public_key)
-    print("The server's public key is %s" %server_public_key_enc)
+    encryption_key = client["public_key"]
+    use_encryption = client["encryption"]
     packet_io.write_packet(
         client_socket, 
         packet_types.EXCHANGE_PUBLIC_KEY, 
         server_public_key_enc, 
-        key=client["public_key"], 
-        encryption=client["encryption"])
+        key=encryption_key, 
+        encryption=use_encryption)
     client["encryption"] = True
+    print("%s's public key is %s" %(client_name, client_public_key_enc))
+    print("The server's public key is %s" %server_public_key_enc)
 
 def handle_registration(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
     client = clients[client_id]
     client_socket = client["client_socket"]
-    parts = packet[5:packet_len].decode("utf-8").split(":", 1)
-    if len(parts) != 2:
-        print("The registration packet from client %s does not meet the required format" %client["client_name"])
-        message = "Server: The registration packet does not meet the required format\n"
-        packet_io.write_packet(
-            client_socket, 
-            packet_types.REGISTER, 
-            message, 
-            key=client["public_key"], 
-            encryption=client["encryption"])
-        return
-    username = parts[0]
-    password = parts[1]
+    encryption_key = client["public_key"]
+    use_encryption = client["encryption"]
+    tokens = packet[5:packet_len].decode("utf-8").split(":", 1)
+    username = tokens[0]
+    password = tokens[1]
     if username in users:
         print("Unable to register username %s because it is already taken" %username)
         message = format("Server: The username %s is already taken\n" %username)
@@ -135,8 +128,8 @@ def handle_registration(packet, client_id):
             client_socket, 
             packet_types.REGISTER, 
             message,
-            key=client["public_key"],
-            encryption=client["encryption"])
+            key=encryption_key,
+            encryption=use_encryption)
     else:
         users[username] = {"password": password, "registration_dt": datetime.now()}
         save_user_db()
@@ -146,27 +139,19 @@ def handle_registration(packet, client_id):
             client_socket, 
             packet_types.REGISTER, 
             message,
-            key=client["public_key"],
-            encryption=client["encryption"])
+            key=encryption_key,
+            encryption=use_encryption)
 
 def handle_login(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
     client = clients[client_id]
     client_name = client["client_name"]
     client_socket = client["client_socket"]
-    parts = packet[5:packet_len].decode("utf-8").split(":", 1)
-    if len(parts) != 2:
-        print("The login packet from %s does not meet the required format" %client_name)
-        message = "Server: The login packet does not meet the required format\n"
-        packet_io.write_packet(
-            client_socket, 
-            packet_types.LOGIN, 
-            message,
-            key=client["public_key"],
-            encryption=client["encryption"])
-        return
-    username = parts[0]
-    password = parts[1]
+    encryption_key = client["public_key"]
+    use_encryption = client["encryption"]
+    tokens = packet[5:packet_len].decode("utf-8").split(":", 1)
+    username = tokens[0]
+    password = tokens[1]
     if username in users and password == users[username]["password"] and username not in logged_in_users:
         client["username"] = username
         print("%s successfully logged in as %s" %(client_name, username))
@@ -175,19 +160,18 @@ def handle_login(packet, client_id):
             client_socket, 
             packet_types.LOGIN, 
             message,
-            key=client["public_key"],
-            encryption=client["encryption"])
+            key=encryption_key,
+            encryption=use_encryption)
         logged_in_users.append(username)
     else:
         print("%s was unable to login" %client_name)
-        message = "Server: Unable to login\n"
+        message = format("Server: Unable to login as %s\n" %username)
         packet_io.write_packet(
             client_socket, 
             packet_types.LOGIN, 
             message,
-            key=client["public_key"],
-            encryption=client["encryption"])
-        return
+            key=encryption_key,
+            encryption=use_encryption)
 
 def handle_message(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -195,9 +179,6 @@ def handle_message(packet, client_id):
     username = client["username"] if "username" in client else client["client_name"]
     message = format("%s: %s" %(username, packet[5:packet_len].decode("utf-8")))
     print(message, end="")
-    echo(message)
-
-def echo(message):
     for client_id in clients:
         client = clients[client_id]
         client_socket = client["client_socket"]
@@ -219,18 +200,16 @@ def handle_date(packet, client_id):
     client_socket = client["client_socket"]
     encryption_key = client["public_key"]
     use_encryption = client["encryption"]
-    if packet_len == 5:
-        today = datetime.now()
-        message = format("Server: The date is %s\n" %today.strftime("%A, %B %-d, %Y"))
-        try:
-            packet_io.write_packet(
-                client_socket,
-                packet_types.DATE,
-                message,
-                key=encryption_key,
-                encryption=use_encryption)
-        except socket.error as e:
-            print(e)
+    client_timezone_name = packet[5:packet_len].decode("utf-8")
+    client_timezone = ZoneInfo(client_timezone_name)
+    now = datetime.now(client_timezone)
+    message = format("Server: The date is %s\n" %now.strftime("%A, %B %-d, %Y"))
+    packet_io.write_packet(
+        client_socket,
+        packet_types.DATE,
+        message,
+        key=encryption_key,
+        encryption=use_encryption)
 
 def handle_time(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -238,18 +217,16 @@ def handle_time(packet, client_id):
     client_socket = client["client_socket"]
     encryption_key = client["public_key"]
     use_encryption = client["encryption"]
-    if packet_len == 5:
-        now = datetime.now().astimezone()
-        message = format("Server: The time is %s\n" %now.strftime("%-I:%M %p %Z"))
-        try:
-            packet_io.write_packet(
-                client_socket,
-                packet_types.TIME,
-                message,
-                key=encryption_key,
-                encryption=use_encryption)
-        except socket.error as e:
-            print(e)
+    client_timezone_name = packet[5:packet_len].decode("utf-8")
+    client_timezone = ZoneInfo(client_timezone_name)
+    now = datetime.now(client_timezone)
+    message = format("Server: The time is %s\n" %now.strftime("%-I:%M %p %Z"))
+    packet_io.write_packet(
+        client_socket,
+        packet_types.TIME,
+        message,
+        key=encryption_key,
+        encryption=use_encryption)
 
 if __name__ == "__main__":
     main()
