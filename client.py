@@ -143,6 +143,8 @@ class Application(tk.Tk):
                 print(e)
                 self.s.close()
                 done = True
+            except Exception as e:
+                print(e)
 
     def process(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)

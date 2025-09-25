@@ -74,6 +74,8 @@ def readloop(client_id):
                 logged_in_users.remove(client["username"])
             del clients[client_id]
             done = True
+        except Exception as e:
+            print(e)
 
 def process(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
