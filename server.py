@@ -38,7 +38,9 @@ def create_client(client_id, client_socket, client_address):
         "client_socket": client_socket,
         "client_address": client_address,
         "public_key": None,
-        "encryption": False
+        "encryption": False,
+        "logged_in": False,
+        "username": None
     }
 
 def parse_keys():
@@ -70,7 +72,7 @@ def readloop(client_id):
         except socket.error as e:
             print(e)
             client_socket.close()
-            if "username" in client:
+            if client["logged_in"]:
                 logged_in_users.remove(client["username"])
             del clients[client_id]
             done = True
@@ -86,6 +88,8 @@ def process(packet, client_id):
         handle_registration(packet, client_id)
     elif packet_type == packet_types.LOGIN:
         handle_login(packet, client_id)
+    elif packet_type == packet_types.LOGOUT:
+        handle_logout(packet, client_id)
     elif packet_type == packet_types.MESSAGE:
         handle_message(packet, client_id)
     elif packet_type == packet_types.DATE:
@@ -156,6 +160,7 @@ def handle_login(packet, client_id):
     password = tokens[1]
     if username in users and password == users[username]["password"] and username not in logged_in_users:
         client["username"] = username
+        client["logged_in"] = True
         print("%s successfully logged in as %s" %(client_name, username))
         message = format("Server: Successfully logged in as %s\n" %username)
         packet_io.write_packet(
@@ -175,10 +180,29 @@ def handle_login(packet, client_id):
             key=encryption_key,
             encryption=use_encryption)
 
+def handle_logout(packet, client_id):
+    packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+    client = clients[client_id]
+    client_name = client["client_name"]
+    client_socket = client["client_socket"]
+    encryption_key = client["public_key"]
+    use_encryption = client["encryption"]
+    username = client["username"]
+    if client["logged_in"]:
+        client["username"] = None
+        client["logged_in"] = False
+        message = format("Server: Successfully logged out of the account %s\n" %username)
+        packet_io.write_packet(
+            client_socket,
+            packet_types.LOGOUT,
+            message,
+            key=encryption_key,
+            encryption=use_encryption)
+
 def handle_message(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
     client = clients[client_id]
-    username = client["username"] if "username" in client else client["client_name"]
+    username = client["username"] if client["logged_in"] else client["client_name"]
     message = format("%s: %s" %(username, packet[5:packet_len].decode("utf-8")))
     print(message, end="")
     for client_id in clients:

@@ -105,6 +105,14 @@ class Application(tk.Tk):
             key=encryption_key,
             encryption=self.use_encryption)
 
+    def logout(self):
+        encryption_key = self.keys["server"]["public"]
+        packet_io.write_packet(self.s,
+            packet_types.LOGOUT,
+            None,
+            key=encryption_key,
+            encryption=self.use_encryption)
+
     def exchange_public_key(self):
         client_public_key = self.keys["client"]["public"]
         client_public_key = parser.encode(client_public_key)
@@ -156,6 +164,8 @@ class Application(tk.Tk):
             self.handle_register(packet)
         elif packet_type == packet_types.LOGIN:
             self.handle_login(packet)
+        elif packet_type == packet_types.LOGOUT:
+            self.handle_logout(packet)
         elif packet_type == packet_types.MESSAGE:
             self.handle_message(packet)
         elif packet_type == packet_types.DATE:
@@ -175,6 +185,11 @@ class Application(tk.Tk):
         self.chat_ta.insert(tk.END, message)
 
     def handle_login(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.chat_ta.insert(tk.END, message)
+
+    def handle_logout(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         message = packet[5:packet_len].decode("utf-8")
         self.chat_ta.insert(tk.END, message)
@@ -211,6 +226,8 @@ class Application(tk.Tk):
             username = tokens[1]
             password = tokens[2]
             self.login(username, password)
+        elif cmdname == "/logout":
+            self.logout()
         elif cmdname == "/date":
             self.get_date()
         elif cmdname == "/time":
