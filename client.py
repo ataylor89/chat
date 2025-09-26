@@ -26,7 +26,7 @@ class Application(tk.Tk):
             "client": {"public": None, "private": None},
             "server": {"public": None, "private": None}
         }
-        self.stop_flag = False
+        self.app_is_closing = False
 
     def create_widgets(self, config):
         self.chat_ta = ScrolledText(self.frame,
@@ -62,13 +62,14 @@ class Application(tk.Tk):
                 message,
                 key=encryption_key,
                 encryption=self.use_encryption)
-        if not self.stop_flag:
+        if not self.app_is_closing:
             self.dm_ta.delete("1.0", tk.END)
             return "break"
 
     def close_application(self):
         self.disconnect()
         self.readloop_thread.join()
+        self.app_is_closing = True
         self.destroy()
 
     def parse_keys(self):
@@ -80,7 +81,6 @@ class Application(tk.Tk):
         self.s.connect((self.host, self.port))
 
     def disconnect(self):
-        self.stop_flag = True
         self.s.close()
 
     def start_readloop(self):
@@ -134,7 +134,8 @@ class Application(tk.Tk):
             encryption=self.use_encryption)
 
     def readloop(self):
-        while not self.stop_flag:
+        done = False
+        while not done:
             try:
                 decryption_key = self.keys["client"]["private"]
                 packet = packet_io.read_packet(self.s, key=decryption_key, encryption=self.use_encryption)
@@ -142,7 +143,7 @@ class Application(tk.Tk):
                     self.process(packet)
             except socket.error as e:
                 print(e)
-                self.stop_flag = True
+                done = True
             except Exception as e:
                 print(e)
 
