@@ -2,19 +2,20 @@ import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
 import packet_io
 import packet_types
+from cmdlist import cmdlist
+from rsa import parser
 import socket
 import threading
 import time
 from datetime import datetime
-from rsa import parser
-import configparser
 import tzlocal
+import configparser
 
 class Application(tk.Tk):
     def __init__(self, config):
         tk.Tk.__init__(self)
         self.title(config["default"]["title"])
-        self.protocol("WM_DELETE_WINDOW", self.handle_close)
+        self.protocol("WM_DELETE_WINDOW", self.close_application)
         self.frame = tk.Frame(self)
         self.frame.pack(fill="both", expand=True)
         self.create_widgets(config)
@@ -22,15 +23,10 @@ class Application(tk.Tk):
         self.port = int(config["default"]["port"])
         self.use_encryption = False
         self.keys = {
-            "client": {
-                "public": None,
-                "private": None
-            },
-            "server": {
-                "public": None,
-                "private": None
-            }
+            "client": {"public": None, "private": None},
+            "server": {"public": None, "private": None}
         }
+        self.stop_flag = False
 
     def create_widgets(self, config):
         self.chat_ta = ScrolledText(self.frame,
@@ -66,11 +62,13 @@ class Application(tk.Tk):
                 message,
                 key=encryption_key,
                 encryption=self.use_encryption)
-        self.dm_ta.delete("1.0", tk.END)
-        return "break"
+        if not self.stop_flag:
+            self.dm_ta.delete("1.0", tk.END)
+            return "break"
 
-    def handle_close(self):
-        self.quit()
+    def close_application(self):
+        self.disconnect()
+        self.readloop_thread.join()
         self.destroy()
 
     def parse_keys(self):
@@ -80,6 +78,10 @@ class Application(tk.Tk):
     def connect(self):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.connect((self.host, self.port))
+
+    def disconnect(self):
+        self.stop_flag = True
+        self.s.close()
 
     def start_readloop(self):
         self.readloop_thread = threading.Thread(target=self.readloop)
@@ -132,8 +134,7 @@ class Application(tk.Tk):
             encryption=self.use_encryption)
 
     def readloop(self):
-        done = False
-        while not done:
+        while not self.stop_flag:
             try:
                 decryption_key = self.keys["client"]["private"]
                 packet = packet_io.read_packet(self.s, key=decryption_key, encryption=self.use_encryption)
@@ -141,8 +142,7 @@ class Application(tk.Tk):
                     self.process(packet)
             except socket.error as e:
                 print(e)
-                self.s.close()
-                done = True
+                self.stop_flag = True
             except Exception as e:
                 print(e)
 
@@ -194,9 +194,8 @@ class Application(tk.Tk):
         self.chat_ta.insert(tk.END, message)
 
     def is_command(self, message):
-        commandlist = ["/register", "/login", "/date", "/time"]
         tokens = message.strip().split(" ")
-        if tokens[0].startswith("/") and tokens[0] in commandlist:
+        if tokens[0].startswith("/") and tokens[0] in cmdlist:
             return True
 
     def process_command(self, message):
@@ -215,6 +214,8 @@ class Application(tk.Tk):
             self.get_date()
         elif cmdname == "/time":
             self.get_time()
+        elif cmdname == "/exit":
+            self.close_application()
 
 def main():
     config = configparser.ConfigParser()
