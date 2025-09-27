@@ -16,6 +16,7 @@ logged_in_users = []
 rsa_keys = {}
 
 def main():
+    packet_io.configure_log("server_log.txt", "w")
     parse_keys()
     load_user_db()
     listen()
@@ -66,7 +67,7 @@ def readloop(client_id):
     while not done:
         try:
             use_encryption = client["encryption"]
-            packet = packet_io.read_packet(client_socket, key=decryption_key, encryption=use_encryption)
+            packet = packet_io.read_packet(client_socket, key=decryption_key, encryption=use_encryption, log=True)
             if packet:
                 process(packet, client_id)
         except socket.error as e:
@@ -113,7 +114,8 @@ def handle_exchange_public_key(packet, client_id):
         packet_types.EXCHANGE_PUBLIC_KEY, 
         server_public_key_enc, 
         key=encryption_key, 
-        encryption=use_encryption)
+        encryption=use_encryption,
+        log=True)
     client["encryption"] = True
     print("%s's public key is %s" %(client_name, client_public_key_enc))
     print("The server's public key is %s" %server_public_key_enc)
@@ -135,7 +137,8 @@ def handle_registration(packet, client_id):
             packet_types.REGISTER, 
             message,
             key=encryption_key,
-            encryption=use_encryption)
+            encryption=use_encryption,
+            log=True)
     else:
         users[username] = {"password": password, "registration_dt": datetime.now()}
         save_user_db()
@@ -146,7 +149,8 @@ def handle_registration(packet, client_id):
             packet_types.REGISTER, 
             message,
             key=encryption_key,
-            encryption=use_encryption)
+            encryption=use_encryption,
+            log=True)
 
 def handle_login(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -168,7 +172,8 @@ def handle_login(packet, client_id):
             packet_types.LOGIN, 
             message,
             key=encryption_key,
-            encryption=use_encryption)
+            encryption=use_encryption,
+            log=True)
         logged_in_users.append(username)
     else:
         print("%s was unable to login" %client_name)
@@ -178,7 +183,8 @@ def handle_login(packet, client_id):
             packet_types.LOGIN, 
             message,
             key=encryption_key,
-            encryption=use_encryption)
+            encryption=use_encryption,
+            log=True)
 
 def handle_logout(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -197,7 +203,8 @@ def handle_logout(packet, client_id):
             packet_types.LOGOUT,
             message,
             key=encryption_key,
-            encryption=use_encryption)
+            encryption=use_encryption,
+            log=True)
 
 def handle_message(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -216,7 +223,8 @@ def handle_message(packet, client_id):
                 packet_types.MESSAGE, 
                 message,
                 key=encryption_key,
-                encryption=use_encryption)
+                encryption=use_encryption,
+                log=True)
         except socket.error as e:
             print(e)
 
@@ -235,7 +243,8 @@ def handle_date(packet, client_id):
         packet_types.DATE,
         message,
         key=encryption_key,
-        encryption=use_encryption)
+        encryption=use_encryption,
+        log=True)
 
 def handle_time(packet, client_id):
     packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -252,7 +261,8 @@ def handle_time(packet, client_id):
         packet_types.TIME,
         message,
         key=encryption_key,
-        encryption=use_encryption)
+        encryption=use_encryption,
+        log=True)
 
 if __name__ == "__main__":
     main()

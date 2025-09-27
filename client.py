@@ -146,7 +146,7 @@ class Application(tk.Tk):
         while not done:
             try:
                 decryption_key = self.keys["client"]["private"]
-                packet = packet_io.read_packet(self.s, key=decryption_key, encryption=self.use_encryption)
+                packet = packet_io.read_packet(self.s, key=decryption_key, encryption=self.use_encryption, log=True)
                 if packet:
                     self.process(packet)
             except socket.error as e:
@@ -236,6 +236,7 @@ class Application(tk.Tk):
             self.close_application()
 
 def main():
+    packet_io.configure_log("client_log.txt", "w")
     config = configparser.ConfigParser()
     config.read("settings.ini")
     app = Application(config)
