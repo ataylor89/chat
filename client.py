@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
-import packet_io
+from packet_io import PacketIO
 import packet_types
 from cmdlist import cmdlist
 from rsa import parser
@@ -12,7 +12,7 @@ import tzlocal
 import configparser
 
 class Application(tk.Tk):
-    def __init__(self, config):
+    def __init__(self, config, packetIO):
         tk.Tk.__init__(self)
         self.title(config["default"]["title"])
         self.protocol("WM_DELETE_WINDOW", self.close_application)
@@ -27,6 +27,7 @@ class Application(tk.Tk):
             "server": {"public": None, "private": None}
         }
         self.app_is_closing = False
+        self.packetIO = packetIO
 
     def create_widgets(self, config):
         self.chat_ta = ScrolledText(self.frame,
@@ -57,7 +58,7 @@ class Application(tk.Tk):
             self.process_command(message)
         else:
             encryption_key = self.keys["server"]["public"]
-            packet_io.write_packet(self.s, 
+            self.packetIO.write_packet(self.s, 
                 packet_types.MESSAGE, 
                 message,
                 key=encryption_key,
@@ -90,7 +91,7 @@ class Application(tk.Tk):
     def register(self, username, password):
         message = username + ":" + password
         encryption_key = self.keys["server"]["public"]
-        packet_io.write_packet(self.s, 
+        self.packetIO.write_packet(self.s, 
             packet_types.REGISTER, 
             message,
             key=encryption_key,
@@ -99,7 +100,7 @@ class Application(tk.Tk):
     def login(self, username, password):
         message = username + ":" + password
         encryption_key = self.keys["server"]["public"]
-        packet_io.write_packet(self.s, 
+        self.packetIO.write_packet(self.s, 
             packet_types.LOGIN, 
             message,
             key=encryption_key,
@@ -107,7 +108,7 @@ class Application(tk.Tk):
 
     def logout(self):
         encryption_key = self.keys["server"]["public"]
-        packet_io.write_packet(self.s,
+        self.packetIO.write_packet(self.s,
             packet_types.LOGOUT,
             None,
             key=encryption_key,
@@ -117,7 +118,7 @@ class Application(tk.Tk):
         client_public_key = self.keys["client"]["public"]
         client_public_key = parser.encode(client_public_key)
         encryption_key = self.keys["server"]["public"]
-        packet_io.write_packet(self.s, 
+        self.packetIO.write_packet(self.s, 
             packet_types.EXCHANGE_PUBLIC_KEY, 
             client_public_key,
             key=encryption_key,
@@ -126,7 +127,7 @@ class Application(tk.Tk):
     def get_date(self):
         encryption_key = self.keys["server"]["public"]
         tz_name = tzlocal.get_localzone_name()
-        packet_io.write_packet(self.s,
+        self.packetIO.write_packet(self.s,
             packet_types.DATE,
             tz_name,
             key=encryption_key,
@@ -135,7 +136,7 @@ class Application(tk.Tk):
     def get_time(self, format=None):
         encryption_key = self.keys["server"]["public"]
         tz_name = tzlocal.get_localzone_name()
-        packet_io.write_packet(self.s,
+        self.packetIO.write_packet(self.s,
             packet_types.TIME,
             tz_name,
             key=encryption_key,
@@ -146,7 +147,7 @@ class Application(tk.Tk):
         while not done:
             try:
                 decryption_key = self.keys["client"]["private"]
-                packet = packet_io.read_packet(self.s, key=decryption_key, encryption=self.use_encryption, log=True)
+                packet = self.packetIO.read_packet(self.s, key=decryption_key, encryption=self.use_encryption)
                 if packet:
                     self.process(packet)
             except socket.error as e:
@@ -236,10 +237,12 @@ class Application(tk.Tk):
             self.close_application()
 
 def main():
-    packet_io.configure_log("client_log.txt", "w")
     config = configparser.ConfigParser()
-    config.read("settings.ini")
-    app = Application(config)
+    config.read("client_settings.ini")
+    packetIO = PacketIO()
+    packetIO.configure_log("client_log.txt", "w")
+    packetIO.enable_logging()
+    app = Application(config, packetIO)
     app.parse_keys()
     app.connect()
     app.start_readloop()
