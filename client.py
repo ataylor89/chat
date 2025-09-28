@@ -238,7 +238,7 @@ class Application(tk.Tk):
 
 def main():
     config = configparser.ConfigParser()
-    config.read("client_settings.ini")
+    config.read("config/client_settings.ini")
     packetIO = PacketIO()
     packetIO.configure_log("client_log.txt", "w")
     packetIO.enable_logging()

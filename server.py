@@ -255,7 +255,7 @@ class Application:
 
 def main():
     config = configparser.ConfigParser()
-    config.read("server_settings.ini")
+    config.read("config/server_settings.ini")
     packetIO = PacketIO()
     packetIO.configure_log("server_log.txt", "w")
     packetIO.enable_logging()
