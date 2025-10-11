@@ -22,7 +22,6 @@ class Client:
             "client": {"public": None, "private": None},
             "server": {"public": None, "private": None}
         }
-        self.packetIO = packetIO
 
     def parse_keys(self):
         self.keys["client"]["public"] = parser.parse_key("rsa/publickey.txt")
