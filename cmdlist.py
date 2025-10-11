@@ -1,4 +1,6 @@
 cmdlist = [
+    "/join",
+    "/leave",
     "/register",
     "/login",
     "/logout",

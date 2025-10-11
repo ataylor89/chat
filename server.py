@@ -19,6 +19,21 @@ class Application:
         self.rsa_keys = {}
         self.packetIO = packetIO
 
+    def parse_keys(self):
+        self.rsa_keys["public"] = parser.parse_key("rsa/publickey.txt")
+        self.rsa_keys["private"] = parser.parse_key("rsa/privatekey.txt")
+
+    def load_user_db(self, path="users.pickle"):
+        if os.path.exists(path):
+            with open(path, "rb") as file:
+                self.users.clear()
+                self.users.update(pickle.load(file))
+
+    def save_user_db(self, path="users.pickle"):
+        if len(self.users) > 0:
+            with open(path, "wb") as file:
+                pickle.dump(self.users, file)
+
     def listen(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.host, self.port))
@@ -42,21 +57,6 @@ class Application:
             "username": None
         }
 
-    def parse_keys(self):
-        self.rsa_keys["public"] = parser.parse_key("rsa/publickey.txt")
-        self.rsa_keys["private"] = parser.parse_key("rsa/privatekey.txt")
-
-    def load_user_db(self, path="users.pickle"):
-        if os.path.exists(path):
-            with open(path, "rb") as file:
-                self.users.clear()
-                self.users.update(pickle.load(file))
-
-    def save_user_db(self, path="users.pickle"):
-        if len(self.users) > 0:
-            with open(path, "wb") as file:
-                pickle.dump(self.users, file)
-
     def readloop(self, client_id):
         client = self.clients[client_id]
         client_socket = client["client_socket"]
@@ -70,19 +70,21 @@ class Application:
                     self.process(packet, client_id)
             except socket.error as e:
                 print(e)
-                client_socket.close()
-                if client["logged_in"]:
-                    self.logged_in_users.remove(client["username"])
-                del self.clients[client_id]
                 done = True
             except Exception as e:
                 print(e)
+        if client_id in self.clients:
+            self.handle_leave(client_id)
 
     def process(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         packet_type = packet[4]
         if packet_type == packet_types.EXCHANGE_PUBLIC_KEY:
             self.handle_exchange_public_key(packet, client_id)
+        elif packet_type == packet_types.JOIN:
+            self.handle_join(packet, client_id)
+        elif packet_type == packet_types.LEAVE:
+            self.handle_leave(packet, client_id)
         elif packet_type == packet_types.REGISTER:
             self.handle_registration(packet, client_id)
         elif packet_type == packet_types.LOGIN:
@@ -95,6 +97,74 @@ class Application:
             self.handle_date(packet, client_id)
         elif packet_type == packet_types.TIME:
             self.handle_time(packet, client_id)
+
+    def userlist(self):
+        ul = []
+        for client_id in self.clients:
+            client = self.clients[client_id]
+            username = client["username"] if client["username"] else client["client_name"]
+            ul.append(username)
+        ul.sort()
+        return ul
+
+    def handle_join(self, packet, client_id):
+        client = self.clients[client_id]
+        client_name = client["client_name"]
+        join_packet = format("Server: %s joined the chat room\n" %client_name)
+        userlist_packet = ":".join(self.userlist())
+        for cli_id in self.clients:
+            cli = self.clients[cli_id] 
+            cli_socket = cli["client_socket"]
+            encryption_key = cli["public_key"]
+            use_encryption = cli["encryption"]
+            try:
+                self.packetIO.write_packet(
+                    cli_socket,
+                    packet_types.JOIN,
+                    join_packet,
+                    key=encryption_key,
+                    encryption=use_encryption)
+                self.packetIO.write_packet(
+                    cli_socket,
+                    packet_types.USERLIST,
+                    userlist_packet,
+                    key=encryption_key,
+                    encryption=use_encryption)
+            except socket.error as e:
+                print(e)
+        print("%s joined the chat room" %client_name)
+
+    def handle_leave(self, packet, client_id):
+        client = self.clients[client_id]
+        username = client["username"] if client["username"] else client["client_name"]
+        leave_packet = format("%s left the chat room" %username)
+        userlist_packet = ":".join(self.userlist())
+        for cli_id in self.clients:
+            cli = self.clients[cli_id]
+            cli_socket = cli["client_socket"]
+            encryption_key = cli["public_key"]
+            use_encryption = cli["encryption"]
+            try:
+                self.packetIO.write_packet(
+                    cli_socket,
+                    packet_types.LEAVE,
+                    leave_packet,
+                    key=encryption_key,
+                    encryption=use_encryption)
+                self.packetIO.write_packet(
+                    cli_socket,
+                    packet_types.USERLIST,
+                    userlist_packet,
+                    key=encryption_key,
+                    encryption=use_encryption)
+            except socket.error as e:
+                print(e)
+        client_socket = client["client_socket"]
+        client_socket.close()
+        if client["logged_in"]:
+            self.logged_in_users.remove(username)
+        del self.clients[client_id]
+        print("%s left the chat room" %username)
 
     def handle_exchange_public_key(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -151,73 +221,95 @@ class Application:
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         client = self.clients[client_id]
         client_name = client["client_name"]
-        client_socket = client["client_socket"]
-        encryption_key = client["public_key"]
-        use_encryption = client["encryption"]
         tokens = packet[5:packet_len].decode("utf-8").split(":", 1)
         username = tokens[0]
-        password = tokens[1]
+        password = tokens[1] 
         if username in self.users and password == self.users[username]["password"] and username not in self.logged_in_users:
             client["username"] = username
             client["logged_in"] = True
-            print("%s successfully logged in as %s" %(client_name, username))
-            message = format("Server: Successfully logged in as %s\n" %username)
-            self.packetIO.write_packet(
-                client_socket, 
-                packet_types.LOGIN, 
-                message,
-                key=encryption_key,
-                encryption=use_encryption)
+            login_packet = format("Server: %s logged in as %s\n" %(client_name, username))
+            userlist_packet = ":".join(self.userlist())
+            for cli_id in self.clients:
+                cli = self.clients[cli_id]
+                cli_socket = cli["client_socket"]
+                encryption_key = cli["public_key"]
+                use_encryption = cli["encryption"]
+                self.packetIO.write_packet(
+                    cli_socket, 
+                    packet_types.LOGIN, 
+                    login_packet,
+                    key=encryption_key,
+                    encryption=use_encryption)
+                self.packetIO.write_packet(
+                    cli_socket,
+                    packet_types.USERLIST,
+                    userlist_packet,
+                    key=encryption_key,
+                    encryption=use_encryption)
             self.logged_in_users.append(username)
+            print("%s logged in as %s" %(client_name, username))
         else:
-            print("%s was unable to login" %client_name)
-            message = format("Server: Unable to login as %s\n" %username)
+            login_packet = format("Server: Unable to login as %s\n" %username)
             self.packetIO.write_packet(
                 client_socket, 
                 packet_types.LOGIN, 
-                message,
+                login_packet,
                 key=encryption_key,
                 encryption=use_encryption)
+            print("%s was unable to login" %client_name)
 
     def handle_logout(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         client = self.clients[client_id]
         client_name = client["client_name"]
-        client_socket = client["client_socket"]
-        encryption_key = client["public_key"]
-        use_encryption = client["encryption"]
         username = client["username"]
         if client["logged_in"]:
             client["username"] = None
             client["logged_in"] = False
-            message = format("Server: Successfully logged out of the account %s\n" %username)
-            self.packetIO.write_packet(
-                client_socket,
-                packet_types.LOGOUT,
-                message,
-                key=encryption_key,
-                encryption=use_encryption)
+            logout_packet = format("Server: %s logged out\n" %username)
+            for cli_id in self.clients:
+                cli = self.clients[cli_id]
+                cli_socket = cli["client_socket"]
+                encryption_key = cli["public_key"]
+                use_encryption = cli["encryption"]
+                try:
+                    self.packetIO.write_packet(
+                        cli_socket,
+                        packet_types.LOGOUT,
+                        logout_packet,
+                        key=encryption_key,
+                        encryption=use_encryption)
+                    self.packetIO.write_packet(
+                        cli_socket,
+                        packet_types.USERLIST,
+                        userlist_packet,
+                        key=encryption_key,
+                        encryption=use_encryption)
+                except socket.error as e:
+                    print(e)
+            self.logged_in_users.remove(username)
+            print("%s logged out\n" %username)
 
     def handle_message(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         client = self.clients[client_id]
         username = client["username"] if client["logged_in"] else client["client_name"]
-        message = format("%s: %s" %(username, packet[5:packet_len].decode("utf-8")))
-        print(message, end="")
-        for client_id in self.clients:
-            client = self.clients[client_id]
-            client_socket = client["client_socket"]
-            encryption_key = client["public_key"]
-            use_encryption = client["encryption"]
+        packet_body = format("%s: %s" %(username, packet[5:packet_len].decode("utf-8")))
+        for cli_id in self.clients:
+            cli = self.clients[cli_id]
+            cli_socket = cli["client_socket"]
+            encryption_key = cli["public_key"]
+            use_encryption = cli["encryption"]
             try:
                 self.packetIO.write_packet(
-                    client_socket, 
+                    cli_socket, 
                     packet_types.MESSAGE, 
-                    message,
+                    packet_body,
                     key=encryption_key,
                     encryption=use_encryption)
             except socket.error as e:
                 print(e)
+        print(packet_body, end="")
 
     def handle_date(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)

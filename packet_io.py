@@ -89,7 +89,7 @@ class PacketIO:
                 self.logger.write("Encrypted packet:\n")
                 contents = packet_utils.hexdump(encrypted_packet)
                 self.logger.write(contents)
-                decrypted_packet = header + message.encode("utf-8")
+                decrypted_packet = header + message.encode("utf-8") if message else header
                 contents = packet_utils.hexdump(decrypted_packet)
                 self.logger.write("Decrypted packet:\n")
                 self.logger.write(contents)

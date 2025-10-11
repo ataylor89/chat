@@ -1,7 +1,7 @@
 EXCHANGE_PUBLIC_KEY = 1
-REGISTER = 2
-JOIN = 3
-LEAVE = 4
+JOIN = 2
+LEAVE = 3
+REGISTER = 4
 LOGIN = 5
 LOGOUT = 6
 USERLIST = 7
@@ -23,9 +23,9 @@ CHESS_PUZZLE_OF_THE_MOMENT = 112
 
 map = {
     1: "EXCHANGE_PUBLIC_KEY",
-    2: "REGISTER",
-    3: "JOIN",
-    4: "LEAVE",
+    2: "JOIN",
+    3: "LEAVE",
+    4: "REGISTER",
     5: "LOGIN",
     6: "LOGOUT",
     7: "USERLIST",

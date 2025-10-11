@@ -16,6 +16,7 @@ class Application(tk.Tk):
         tk.Tk.__init__(self)
         self.title(config["default"]["title"])
         self.protocol("WM_DELETE_WINDOW", self.close_application)
+        self.resizable(False, False)
         self.frame = tk.Frame(self)
         self.frame.pack(fill="both", expand=True)
         self.create_widgets(config)
@@ -30,24 +31,38 @@ class Application(tk.Tk):
         self.packetIO = packetIO
 
     def create_widgets(self, config):
+        bgcolor = config["default"]["bg"]
+        fgcolor = config["default"]["fg"]
+        fontname = config["default"]["fontname"]
+        fontsize = int(config["default"]["fontsize"])
         self.chat_ta = ScrolledText(self.frame,
             width=80,
             height=30,
             wrap="word", 
-            bg=config["default"]["bg"],
-            fg=config["default"]["fg"],
-            font=(config["default"]["fontname"], int(config["default"]["fontsize"])))
-        self.chat_ta.grid(column=0, row=0)
+            bg=bgcolor,
+            fg=fgcolor,
+            font=(fontname, fontsize)) 
+        self.chat_ta.grid(row=0, column=0)
         self.chat_ta.bind("<Key>", self.handle_key_press)
         self.dm_ta = ScrolledText(self.frame,
             width=80,
             height=6,
             wrap="word",
-            bg=config["default"]["bg"],
-            fg=config["default"]["fg"],
-            font=(config["default"]["fontname"], int(config["default"]["fontsize"])))
+            bg=bgcolor,
+            fg=fgcolor,
+            font=(fontname, fontsize))
         self.dm_ta.bind("<Return>", self.handle_return)
-        self.dm_ta.grid(column=0, row=1)
+        self.dm_ta.grid(row=1, column=0)
+        self.userlist_ys = tk.Scrollbar(self.frame, orient=tk.VERTICAL)
+        self.userlist_ys.grid(row=0, column=2, rowspan=2, sticky="ns")
+        self.userlist_xs = tk.Scrollbar(self.frame, orient=tk.HORIZONTAL)
+        self.userlist_xs.grid(row=2, column=1, sticky="ew")
+        self.userlist_lb = tk.Listbox(self.frame, bg=bgcolor, fg=fgcolor)
+        self.userlist_lb.config(yscrollcommand=self.userlist_ys.set)
+        self.userlist_lb.config(xscrollcommand=self.userlist_xs.set)
+        self.userlist_ys.config(command=self.userlist_lb.yview)
+        self.userlist_xs.config(command=self.userlist_lb.xview)
+        self.userlist_lb.grid(column=1, row=0, rowspan=2, sticky="nsew")
 
     def handle_key_press(self, event):
         return "break"
@@ -94,6 +109,22 @@ class Application(tk.Tk):
         self.packetIO.write_packet(self.s, 
             packet_types.REGISTER, 
             message,
+            key=encryption_key,
+            encryption=self.use_encryption)
+
+    def join(self):
+        encryption_key = self.keys["server"]["public"]
+        self.packetIO.write_packet(self.s,
+            packet_types.JOIN,
+            None,
+            key=encryption_key,
+            encryption=self.use_encryption)
+
+    def leave(self):
+        encryption_key = self.keys["server"]["public"]
+        self.packetIO.write_packet(self.s,
+            packet_types.LEAVE,
+            None,
             key=encryption_key,
             encryption=self.use_encryption)
 
@@ -161,12 +192,18 @@ class Application(tk.Tk):
         packet_type = packet[4]
         if packet_type == packet_types.EXCHANGE_PUBLIC_KEY:
             self.handle_exchange_public_key(packet)
+        elif packet_type == packet_types.JOIN:
+            self.handle_join(packet)
+        elif packet_type == packet_types.LEAVE:
+            self.handle_leave(packet)
         elif packet_type == packet_types.REGISTER:
             self.handle_register(packet)
         elif packet_type == packet_types.LOGIN:
             self.handle_login(packet)
         elif packet_type == packet_types.LOGOUT:
             self.handle_logout(packet)
+        elif packet_type == packet_types.USERLIST:
+            self.handle_userlist(packet)
         elif packet_type == packet_types.MESSAGE:
             self.handle_message(packet)
         elif packet_type == packet_types.DATE:
@@ -179,6 +216,16 @@ class Application(tk.Tk):
         server_public_key = packet[5:packet_len].decode("utf-8")
         self.keys["server"]["public"] = parser.decode(server_public_key)
         self.use_encryption = True
+
+    def handle_join(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.chat_ta.insert(tk.END, message)
+
+    def handle_leave(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.chat_ta.insert(tk.END, message)
 
     def handle_register(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -194,6 +241,14 @@ class Application(tk.Tk):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         message = packet[5:packet_len].decode("utf-8")
         self.chat_ta.insert(tk.END, message)
+
+    def handle_userlist(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        packet_body = packet[5:packet_len].decode("utf-8")
+        userlist = packet_body.split(":")
+        self.userlist_lb.delete(0, tk.END)
+        for username in userlist:
+            self.userlist_lb.insert(tk.END, username)
 
     def handle_message(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -222,6 +277,10 @@ class Application(tk.Tk):
             username = tokens[1]
             password = tokens[2]
             self.register(username, password)
+        elif cmdname == "/join":
+            self.join()
+        elif cmdname == "/leave":
+            self.leave()
         elif cmdname == "/login":
             tokens = message.strip().split()
             username = tokens[1]
