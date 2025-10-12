@@ -62,9 +62,7 @@ class Client:
     def process(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         packet_type = packet[4]
-        if packet_type == packet_types.EXCHANGE_PUBLIC_KEY:
-            self.handle_exchange_public_key(packet)
-        elif packet_type == packet_types.ENCRYPTION_ON:
+        if packet_type == packet_types.ENCRYPTION_ON:
             self.handle_encryption_on(packet)
         elif packet_type == packet_types.ENCRYPTION_OFF:
             self.handle_encryption_off(packet)
@@ -92,14 +90,9 @@ class Client:
         client_public_key = self.keys["client"]["public"]
         client_public_key = parser.encode(client_public_key)
         encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.s, 
-            packet_types.EXCHANGE_PUBLIC_KEY, 
-            client_public_key,
-            key=encryption_key,
-            encryption=self.use_encryption)
         self.packetIO.write_packet(self.s,
             packet_types.ENCRYPTION_ON,
-            None,
+            client_public_key,
             key=encryption_key,
             encryption=self.use_encryption)
 
@@ -179,15 +172,15 @@ class Client:
             key=encryption_key,
             encryption=self.use_encryption)
 
-    def handle_exchange_public_key(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        server_public_key = packet[5:packet_len].decode("utf-8")
-        self.keys["server"]["public"] = parser.decode(server_public_key)
-
     def handle_encryption_on(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        message = packet[5:packet_len].decode("utf-8")
+        packet_body = packet[5:packet_len].decode("utf-8")
+        index = packet_body.find(":")
+        index = packet_body.find(":", index+1)
+        message = packet_body[0:index]
+        server_public_key = packet_body[index+1:]
         self.gui.add_message(message)
+        self.keys["server"]["public"] = parser.decode(server_public_key)
         self.use_encryption = True
 
     def handle_encryption_off(self, packet):

@@ -84,9 +84,7 @@ class Server:
     def process(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         packet_type = packet[4]
-        if packet_type == packet_types.EXCHANGE_PUBLIC_KEY:
-            self.handle_exchange_public_key(packet, client_id)
-        elif packet_type == packet_types.ENCRYPTION_ON:
+        if packet_type == packet_types.ENCRYPTION_ON:
             self.handle_encryption_on(packet, client_id)
         elif packet_type == packet_types.ENCRYPTION_OFF:
             self.handle_encryption_off(packet, client_id)
@@ -117,38 +115,26 @@ class Server:
         ul.sort()
         return ul
 
-    def handle_exchange_public_key(self, packet, client_id):
+    def handle_encryption_on(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         client = self.clients[client_id]
         client_name = client["client_name"]
         client_socket = client["client_socket"]
+        username = client["username"] if client["username"] else client_name
         client_public_key_enc = packet[5:packet_len].decode("utf-8")
         client["public_key"] = parser.decode(client_public_key_enc)
         server_public_key = parser.parse_key("rsa/publickey.txt")
         server_public_key_enc = parser.encode(server_public_key)
         encryption_key = client["public_key"]
         use_encryption = client["encryption"]
+        packet_body = format("Server: Encryption turned on for %s\n" %username)
+        packet_body += ":"
+        packet_body += server_public_key_enc
         self.packetIO.write_packet(
             client_socket, 
-            packet_types.EXCHANGE_PUBLIC_KEY, 
-            server_public_key_enc, 
+            packet_types.ENCRYPTION_ON, 
+            packet_body, 
             key=encryption_key, 
-            encryption=use_encryption)
-        print("%s's public key is %s" %(client_name, client_public_key_enc))
-        print("The server's public key is %s" %server_public_key_enc)
-
-    def handle_encryption_on(self, packet, client_id):
-        client = self.clients[client_id]
-        client_socket = client["client_socket"]
-        encryption_key = client["public_key"]
-        use_encryption = client["encryption"]
-        username = client["username"] if client["username"] else client["client_name"]
-        packet_body = format("Server: Encryption turned on for %s\n" %username)
-        self.packetIO.write_packet(
-            client_socket,
-            packet_types.ENCRYPTION_ON,
-            packet_body,
-            key=encryption_key,
             encryption=use_encryption)
         client["encryption"] = True
         print("Encryption turned on for %s" %username)
