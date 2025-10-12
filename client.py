@@ -41,6 +41,8 @@ class Client:
                 done = True
             except Exception as e:
                 print(e)
+        self.s = None
+        self.use_encryption = False
 
     def process(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -88,9 +90,13 @@ class Client:
                 encryption=self.use_encryption)
 
     def disconnect(self):
-        self.s.close()
-        self.readloop_thread.join()
-        self.s = None
+        if self.s:
+            encryption_key = self.keys["server"]["public"]
+            self.packetIO.write_packet(self.s,
+                packet_types.DISCONNECT,
+                None,
+                key=encryption_key,
+                encryption=self.use_encryption)
 
     def enable_encryption(self):
         self.parse_keys()
@@ -190,6 +196,8 @@ class Client:
         self.gui.add_message(message)
 
     def handle_disconnect(self, packet):
+        if self.s:
+            self.s.close()
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         message = packet[5:packet_len].decode("utf-8")
         self.gui.add_message(message)
