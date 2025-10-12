@@ -184,13 +184,14 @@ class Client:
             encryption=self.use_encryption)
 
     def exit(self):
-        self.packetIO.write_packet(self.s,
-            packet_types.DISCONNECT,
-            None,
-            key=None,
-            encryption=False)
-        self.s.close()
-        self.readloop_thread.join()
+        if self.s:
+            self.packetIO.write_packet(self.s,
+                packet_types.DISCONNECT,
+                None,
+                key=None,
+                encryption=False)
+            self.s.close()
+            self.readloop_thread.join()
         self.gui.app_is_closing = True
         self.gui.destroy()
 
