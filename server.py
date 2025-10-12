@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 from rsa import parser
 import configparser
 
-class Application:
+class Server:
     def __init__(self, config, packetIO):
         self.host = config["default"]["host"]
         self.port = int(config["default"]["port"])
@@ -426,10 +426,10 @@ def main():
     config.read("config/server_settings.ini")
     packetIO = PacketIO()
     packetIO.open_log("server_log.txt", "w")
-    app = Application(config, packetIO)
-    app.parse_keys()
-    app.load_user_db()
-    app.listen()
+    server = Server(config, packetIO)
+    server.parse_keys()
+    server.load_user_db()
+    server.listen()
 
 if __name__ == "__main__":
     main()
