@@ -42,12 +42,13 @@ class Server:
         while True:
             client_socket, client_address = self.server_socket.accept()
             client_id += 1
-            self.create_client(client_id, client_socket, client_address)
+            client = self.create_client(client_id, client_socket, client_address)
             thread = threading.Thread(target=self.readloop, args=(client_id,))
             thread.start()
+            print("%s has connected to the server" %client["client_name"])
 
     def create_client(self, client_id, client_socket, client_address):
-        self.clients[client_id] = {
+        client = {
             "client_name": format("Client-%d" %client_id),
             "client_socket": client_socket,
             "client_address": client_address,
@@ -57,6 +58,8 @@ class Server:
             "logged_in": False,
             "username": None
         }
+        self.clients[client_id] = client
+        return client
 
     def readloop(self, client_id):
         client = self.clients[client_id]
@@ -74,17 +77,14 @@ class Server:
                 done = True
             except Exception as e:
                 print(e)
-        if client_id in self.clients:
-            self.handle_disconnect(packet, client_id)
+        client_socket.close()
+        del self.clients[client_id]
+        print("%s has disconnected from the server" %username)
 
     def process(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         packet_type = packet[4]
-        if packet_type == packet_types.CONNECT:
-            self.handle_connect(packet, client_id)
-        elif packet_type == packet_types.DISCONNECT:
-            self.handle_disconnect(packet, client_id)
-        elif packet_type == packet_types.EXCHANGE_PUBLIC_KEY:
+        if packet_type == packet_types.EXCHANGE_PUBLIC_KEY:
             self.handle_exchange_public_key(packet, client_id)
         elif packet_type == packet_types.ENCRYPTION_ON:
             self.handle_encryption_on(packet, client_id)
@@ -116,40 +116,6 @@ class Server:
                 ul.append(username)
         ul.sort()
         return ul
-
-    def handle_connect(self, packet, client_id):
-        client = self.clients[client_id]
-        client_socket = client["client_socket"]
-        client_name = client["client_name"]
-        encryption_key = client["public_key"]
-        use_encryption = client["encryption"]
-        connect_packet = format("Server: %s has connected to the server\n" %client_name)
-        self.packetIO.write_packet(
-            client_socket,
-            packet_types.CONNECT,
-            connect_packet,
-            key=encryption_key,
-            encryption=use_encryption)
-        print("%s has connected to the server" %client_name)
-
-    def handle_disconnect(self, packet, client_id):
-        client = self.clients[client_id]
-        if client["active"]:
-            self.handle_leave(packet, client_id)
-        client_socket = client["client_socket"]
-        username = client["username"] if client["username"] else client["client_name"]
-        encryption_key = client["public_key"]
-        use_encryption = client["encryption"]
-        packet_body = format("Server: %s has disconnected from the server\n" %username)
-        self.packetIO.write_packet(
-            client_socket,
-            packet_types.DISCONNECT,
-            packet_body,
-            key=encryption_key,
-            encryption=use_encryption)
-        del self.clients[client_id]
-        client_socket.close()
-        print("%s has disconnected from the server" %username)
 
     def handle_exchange_public_key(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)

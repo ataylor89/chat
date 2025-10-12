@@ -64,7 +64,6 @@ class GUI(tk.Tk):
             return "break"
 
     def close_application(self):
-        self.client.disconnect()
         self.app_is_closing = True
         self.destroy()
 
