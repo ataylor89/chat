@@ -129,7 +129,7 @@ class Server:
             packet_body,
             key=encryption_key,
             encryption=use_encryption)
-        print("%s has connected to the server" %client["client_name"])
+        print("%s has connected to the server" %client_name)
 
     def handle_disconnect(self, packet, client_id):
         client = self.clients[client_id]
