@@ -11,10 +11,9 @@ import tzlocal
 import configparser
 
 class Client:
-    def __init__(self, config, packetIO, gui):
+    def __init__(self, config, packetIO):
         self.config = config
         self.packetIO = packetIO
-        self.gui = gui
         self.host = config["default"]["host"]
         self.port = int(config["default"]["port"])
         self.use_encryption = False
@@ -24,24 +23,12 @@ class Client:
         }
         self.s = None
 
+    def set_gui(self, gui):
+        self.gui = gui
+
     def parse_keys(self):
         self.keys["client"]["public"] = parser.parse_key("rsa/publickey.txt")
         self.keys["client"]["private"] = parser.parse_key("rsa/privatekey.txt")
-
-    def connect(self, host, port):
-        if not self.s:
-            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.s.connect((host, port))
-            self.readloop_thread = threading.Thread(target=self.readloop)
-            self.readloop_thread.start()
-            self.gui.add_message("Client: Connected to server\n")
-
-    def disconnect(self):
-        if self.s:
-            self.s.close()
-            self.readloop_thread.join()
-            self.s = None
-            self.gui.add_message("Client: Disconnected from server\n")
 
     def readloop(self):
         done = False
@@ -62,7 +49,11 @@ class Client:
     def process(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         packet_type = packet[4]
-        if packet_type == packet_types.ENCRYPTION_ON:
+        if packet_type == packet_types.CONNECT:
+            self.handle_connect(packet)
+        elif packet_type == packet_types.DISCONNECT:
+            self.handle_disconnect(packet)
+        elif packet_type == packet_types.ENCRYPTION_ON:
             self.handle_encryption_on(packet)
         elif packet_type == packet_types.ENCRYPTION_OFF:
             self.handle_encryption_off(packet)
@@ -84,6 +75,26 @@ class Client:
             self.handle_date(packet)
         elif packet_type == packet_types.TIME:
             self.handle_time(packet)
+
+    def connect(self, host, port):
+        if not self.s:
+            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.s.connect((host, port))
+            self.readloop_thread = threading.Thread(target=self.readloop)
+            self.readloop_thread.start()
+            self.packetIO.write_packet(self.s,
+                packet_types.CONNECT,
+                None,
+                key=None,
+                encryption=False)
+
+    def disconnect(self):
+        if self.s:
+            self.packetIO.write_packet(self.s,
+                packet_types.DISCONNECT,
+                None,
+                key=None,
+                encryption=False)
 
     def encryption_on(self):
         self.parse_keys()
@@ -171,6 +182,29 @@ class Client:
             tz_name,
             key=encryption_key,
             encryption=self.use_encryption)
+
+    def exit(self):
+        self.packetIO.write_packet(self.s,
+            packet_types.DISCONNECT,
+            None,
+            key=None,
+            encryption=False)
+        self.s.close()
+        self.readloop_thread.join()
+        self.gui.app_is_closing = True
+        self.gui.destroy()
+
+    def handle_connect(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.gui.add_message(message)
+
+    def handle_disconnect(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.gui.add_message(message)
+        if self.s:
+            self.s.close()
 
     def handle_encryption_on(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -282,17 +316,16 @@ class Client:
         elif cmdname == "/time":
             self.get_time()
         elif cmdname == "/exit":
-            self.disconnect()
-            self.gui.close_application()
+            self.exit()
 
 def main():
     config = configparser.ConfigParser()
     config.read("config/client_settings.ini")
     packetIO = PacketIO()
     packetIO.open_log("client_log.txt", "w")
-    gui = GUI(config)
-    cli = Client(config, packetIO, gui)
-    gui.set_client(cli)
+    cli = Client(config, packetIO)
+    gui = GUI(config, cli)
+    cli.set_gui(gui)
     gui.mainloop()
 
 if __name__ == "__main__":

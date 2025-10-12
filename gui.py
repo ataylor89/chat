@@ -2,19 +2,17 @@ import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
 
 class GUI(tk.Tk):
-    def __init__(self, config):
+    def __init__(self, config, client):
         tk.Tk.__init__(self)
         self.config = config
+        self.client = client
         self.title(config["default"]["title"])
-        self.protocol("WM_DELETE_WINDOW", self.close_application)
+        self.protocol("WM_DELETE_WINDOW", self.client.exit)
         self.resizable(False, False)
         self.frame = tk.Frame(self)
         self.frame.pack(fill="both", expand=True)
         self.create_widgets(config)
         self.app_is_closing = False
-
-    def set_client(self, client):
-        self.client = client
 
     def create_widgets(self, config):
         bgcolor = config["default"]["bg"]
@@ -62,10 +60,6 @@ class GUI(tk.Tk):
         if not self.app_is_closing:
             self.dm_ta.delete("1.0", tk.END)
             return "break"
-
-    def close_application(self):
-        self.app_is_closing = True
-        self.destroy()
 
     def add_message(self, message):
         self.chat_ta.insert(tk.END, message)
