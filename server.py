@@ -53,7 +53,7 @@ class Server:
             "client_address": client_address,
             "public_key": None,
             "encryption": False,
-            "joined": False,
+            "active": False,
             "logged_in": False,
             "username": None
         }
@@ -111,7 +111,7 @@ class Server:
         ul = []
         for client_id in self.clients:
             client = self.clients[client_id]
-            if client["joined"]:
+            if client["active"]:
                 username = client["username"] if client["username"] else client["client_name"]
                 ul.append(username)
         ul.sort()
@@ -134,7 +134,7 @@ class Server:
 
     def handle_disconnect(self, packet, client_id):
         client = self.clients[client_id]
-        if client["joined"]:
+        if client["active"]:
             self.handle_leave(packet, client_id)
         client_socket = client["client_socket"]
         username = client["username"] if client["username"] else client["client_name"]
@@ -205,7 +205,7 @@ class Server:
 
     def handle_join(self, packet, client_id):
         client = self.clients[client_id]
-        client["joined"] = True
+        client["active"] = True
         client_name = client["client_name"]
         join_packet = format("Server: %s joined the chat room\n" %client_name)
         userlist_packet = ":".join(self.userlist())
@@ -236,7 +236,7 @@ class Server:
         username = client["username"] if client["username"] else client["client_name"]
         if client["logged_in"]:
             self.logged_in_users.remove(username)
-        client["joined"] = False
+        client["active"] = False
         client["logged_in"] = False
         leave_packet = format("Server: %s left the chat room\n" %username)
         userlist_packet = ":".join(self.userlist())
