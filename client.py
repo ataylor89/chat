@@ -174,7 +174,7 @@ class Client:
             key=encryption_key,
             encryption=self.use_encryption)
 
-    def get_time(self, format=None):
+    def get_time(self):
         encryption_key = self.keys["server"]["public"]
         tz_name = tzlocal.get_localzone_name()
         self.packetIO.write_packet(self.s,
