@@ -98,7 +98,7 @@ class Client:
                 key=encryption_key,
                 encryption=self.use_encryption)
 
-    def enable_encryption(self):
+    def encryption_on(self):
         self.parse_keys()
         client_public_key = self.keys["client"]["public"]
         client_public_key = parser.encode(client_public_key)
@@ -114,7 +114,7 @@ class Client:
             key=encryption_key,
             encryption=self.use_encryption)
 
-    def disable_encryption(self):
+    def encryption_off(self):
         encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.s,
             packet_types.ENCRYPTION_OFF,
@@ -288,9 +288,9 @@ class Client:
             tokens = message.strip().split()
             if len(tokens) == 2:
                 if tokens[1] == "on":
-                    self.enable_encryption()
+                    self.encryption_on()
                 elif tokens[1] == "off":
-                    self.disable_encryption()
+                    self.encryption_off()
         elif cmdname == "/join":
             self.join()
         elif cmdname == "/leave":
