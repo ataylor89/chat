@@ -42,7 +42,7 @@ class Server:
         while True:
             client_socket, client_address = self.server_socket.accept()
             client_id += 1
-            client = self.create_client(client_id, client_socket, client_address)
+            self.create_client(client_id, client_socket, client_address)
             thread = threading.Thread(target=self.readloop, args=(client_id,))
             thread.start()
 
