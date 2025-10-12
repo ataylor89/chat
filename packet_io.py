@@ -5,9 +5,8 @@ from datetime import datetime
 class PacketIO:
     def __init__(self):
         self.logger = None
-        self.logging_enabled = False
 
-    def configure_log(self, filename, mode):
+    def open_log(self, filename, mode):
         if self.logger and not self.logger.closed:
             self.logger.close()
         self.logger = open(filename, mode)
@@ -15,12 +14,7 @@ class PacketIO:
     def close_log(self):
         if self.logger and not self.logger.closed:
             self.logger.close()
-
-    def enable_logging(self):
-        self.logging_enabled = True
-
-    def disable_logging(self):
-        self.logging_enabled = False
+        self.logger = None
 
     def read_packet(self, s, key=None, encryption=False):
         now = datetime.now().astimezone()
@@ -33,7 +27,7 @@ class PacketIO:
             body = s.recv(packet_len-5)
             encrypted_packet = header + body
             if len(encrypted_packet) == packet_len:
-                if self.logging_enabled:
+                if self.logger:
                     log_message = format("%s -- %s\n" %(timestamp, "Received an encrypted packet"))
                     self.logger.write(log_message)
                     self.logger.write("Encrypted packet:\n")
@@ -43,7 +37,7 @@ class PacketIO:
                 body = decrypt.decrypt(body, key)
                 body = body.encode("utf-8")
                 decrypted_packet = header + body
-                if self.logging_enabled:
+                if self.logger:
                     self.logger.write("Decrypted packet:\n")
                     contents = packet_utils.hexdump(decrypted_packet)
                     self.logger.write(contents)
@@ -58,7 +52,7 @@ class PacketIO:
                 return None
             packet_len = int.from_bytes(header[0:4], byteorder="big", signed=False)
             packet = header + s.recv(packet_len-5)
-            if self.logging_enabled:
+            if self.logger:
                 log_message = format("%s -- %s\n" %(timestamp, "Received an unencrypted packet"))
                 self.logger.write(log_message)
                 contents = packet_utils.hexdump(packet)
@@ -83,7 +77,7 @@ class PacketIO:
             header = packet_len.to_bytes(4, byteorder="big") + packet_type.to_bytes(1)
             encrypted_packet = header + body if message else header
             s.sendall(encrypted_packet)
-            if self.logging_enabled:
+            if self.logger:
                 log_message = format("%s -- %s\n" %(timestamp, "Sent an encrypted packet"))
                 self.logger.write(log_message)
                 self.logger.write("Encrypted packet:\n")
@@ -105,7 +99,7 @@ class PacketIO:
             header = packet_len.to_bytes(4, byteorder="big") + packet_type.to_bytes(1)
             packet = header + body if message else header
             s.sendall(packet)
-            if self.logging_enabled:
+            if self.logger:
                 log_message = format("%s -- %s\n" %(timestamp, "Sent an unencrypted packet"))
                 self.logger.write(log_message)
                 contents = packet_utils.hexdump(packet)
