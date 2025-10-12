@@ -177,7 +177,7 @@ class Server:
         encryption_key = client["public_key"]
         use_encryption = client["encryption"]
         username = client["username"] if client["username"] else client["client_name"]
-        packet_body = format("Server: Encryption enabled for %s\n" %username)
+        packet_body = format("Server: Encryption turned on for %s\n" %username)
         self.packetIO.write_packet(
             client_socket,
             packet_types.ENCRYPTION_ON,
@@ -185,7 +185,7 @@ class Server:
             key=encryption_key,
             encryption=use_encryption)
         client["encryption"] = True
-        print("Encryption enabled for %s" %username)
+        print("Encryption turned on for %s" %username)
 
     def handle_encryption_off(self, packet, client_id):
         client = self.clients[client_id]
@@ -193,7 +193,7 @@ class Server:
         encryption_key = client["public_key"]
         use_encryption = client["encryption"]
         username = client["username"] if client["username"] else client["client_name"]
-        packet_body = format("Server: Encryption disabled for %s\n" %username)
+        packet_body = format("Server: Encryption turned off for %s\n" %username)
         self.packetIO.write_packet(
             client_socket,
             packet_types.ENCRYPTION_OFF,
@@ -201,7 +201,7 @@ class Server:
             key=encryption_key,
             encryption=use_encryption)
         client["encryption"] = False
-        print("Encryption disabled for %s" %username)
+        print("Encryption turned off for %s" %username)
 
     def handle_join(self, packet, client_id):
         client = self.clients[client_id]
