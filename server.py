@@ -53,6 +53,7 @@ class Application:
             "client_address": client_address,
             "public_key": None,
             "encryption": False,
+            "joined": False,
             "logged_in": False,
             "username": None
         }
@@ -74,13 +75,21 @@ class Application:
             except Exception as e:
                 print(e)
         if client_id in self.clients:
-            self.handle_leave(client_id)
+            self.handle_disconnect(packet, client_id)
 
     def process(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         packet_type = packet[4]
-        if packet_type == packet_types.EXCHANGE_PUBLIC_KEY:
+        if packet_type == packet_types.CONNECT:
+            self.handle_connect(packet, client_id)
+        elif packet_type == packet_types.DISCONNECT:
+            self.handle_disconnect(packet, client_id)
+        elif packet_type == packet_types.EXCHANGE_PUBLIC_KEY:
             self.handle_exchange_public_key(packet, client_id)
+        elif packet_type == packet_types.ENCRYPTION_ON:
+            self.handle_encryption_on(packet, client_id)
+        elif packet_type == packet_types.ENCRYPTION_OFF:
+            self.handle_encryption_off(packet, client_id)
         elif packet_type == packet_types.JOIN:
             self.handle_join(packet, client_id)
         elif packet_type == packet_types.LEAVE:
@@ -102,13 +111,101 @@ class Application:
         ul = []
         for client_id in self.clients:
             client = self.clients[client_id]
-            username = client["username"] if client["username"] else client["client_name"]
-            ul.append(username)
+            if client["joined"]:
+                username = client["username"] if client["username"] else client["client_name"]
+                ul.append(username)
         ul.sort()
         return ul
 
+    def handle_connect(self, packet, client_id):
+        client = self.clients[client_id]
+        client_socket = client["client_socket"]
+        client_name = client["client_name"]
+        encryption_key = client["public_key"]
+        use_encryption = client["encryption"]
+        connect_packet = format("Server: %s has connected to the server\n" %client_name)
+        self.packetIO.write_packet(
+            client_socket,
+            packet_types.CONNECT,
+            connect_packet,
+            key=encryption_key,
+            encryption=use_encryption)
+        print("%s has connected to the server" %client_name)
+
+    def handle_disconnect(self, packet, client_id):
+        client = self.clients[client_id]
+        if client["joined"]:
+            self.handle_leave(packet, client_id)
+        client_socket = client["client_socket"]
+        username = client["username"] if client["username"] else client["client_name"]
+        encryption_key = client["public_key"]
+        use_encryption = client["encryption"]
+        packet_body = format("Server: %s has disconnected from the server\n" %username)
+        self.packetIO.write_packet(
+            client_socket,
+            packet_types.DISCONNECT,
+            packet_body,
+            key=encryption_key,
+            encryption=use_encryption)
+        del self.clients[client_id]
+        client_socket.close()
+        print("%s has disconnected from the server" %username)
+
+    def handle_exchange_public_key(self, packet, client_id):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        client = self.clients[client_id]
+        client_name = client["client_name"]
+        client_socket = client["client_socket"]
+        client_public_key_enc = packet[5:packet_len].decode("utf-8")
+        client["public_key"] = parser.decode(client_public_key_enc)
+        server_public_key = parser.parse_key("rsa/publickey.txt")
+        server_public_key_enc = parser.encode(server_public_key)
+        encryption_key = client["public_key"]
+        use_encryption = client["encryption"]
+        self.packetIO.write_packet(
+            client_socket, 
+            packet_types.EXCHANGE_PUBLIC_KEY, 
+            server_public_key_enc, 
+            key=encryption_key, 
+            encryption=use_encryption)
+        print("%s's public key is %s" %(client_name, client_public_key_enc))
+        print("The server's public key is %s" %server_public_key_enc)
+
+    def handle_encryption_on(self, packet, client_id):
+        client = self.clients[client_id]
+        client_socket = client["client_socket"]
+        encryption_key = client["public_key"]
+        use_encryption = client["encryption"]
+        username = client["username"] if client["username"] else client["client_name"]
+        packet_body = format("Server: Encryption enabled for %s\n" %username)
+        self.packetIO.write_packet(
+            client_socket,
+            packet_types.ENCRYPTION_ON,
+            packet_body,
+            key=encryption_key,
+            encryption=use_encryption)
+        client["encryption"] = True
+        print("Encryption enabled for %s" %username)
+
+    def handle_encryption_off(self, packet, client_id):
+        client = self.clients[client_id]
+        client_socket = client["client_socket"]
+        encryption_key = client["public_key"]
+        use_encryption = client["encryption"]
+        username = client["username"] if client["username"] else client["client_name"]
+        packet_body = format("Server: Encryption disabled for %s\n" %username)
+        self.packetIO.write_packet(
+            client_socket,
+            packet_types.ENCRYPTION_OFF,
+            packet_body,
+            key=encryption_key,
+            encryption=use_encryption)
+        client["encryption"] = False
+        print("Encryption disabled for %s" %username)
+
     def handle_join(self, packet, client_id):
         client = self.clients[client_id]
+        client["joined"] = True
         client_name = client["client_name"]
         join_packet = format("Server: %s joined the chat room\n" %client_name)
         userlist_packet = ":".join(self.userlist())
@@ -137,7 +234,11 @@ class Application:
     def handle_leave(self, packet, client_id):
         client = self.clients[client_id]
         username = client["username"] if client["username"] else client["client_name"]
-        leave_packet = format("%s left the chat room" %username)
+        if client["logged_in"]:
+            self.logged_in_users.remove(username)
+        client["joined"] = False
+        client["logged_in"] = False
+        leave_packet = format("Server: %s left the chat room\n" %username)
         userlist_packet = ":".join(self.userlist())
         for cli_id in self.clients:
             cli = self.clients[cli_id]
@@ -159,33 +260,7 @@ class Application:
                     encryption=use_encryption)
             except socket.error as e:
                 print(e)
-        client_socket = client["client_socket"]
-        client_socket.close()
-        if client["logged_in"]:
-            self.logged_in_users.remove(username)
-        del self.clients[client_id]
         print("%s left the chat room" %username)
-
-    def handle_exchange_public_key(self, packet, client_id):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        client = self.clients[client_id]
-        client_name = client["client_name"]
-        client_socket = client["client_socket"]
-        client_public_key_enc = packet[5:packet_len].decode("utf-8")
-        client["public_key"] = parser.decode(client_public_key_enc)
-        server_public_key = parser.parse_key("rsa/publickey.txt")
-        server_public_key_enc = parser.encode(server_public_key)
-        encryption_key = client["public_key"]
-        use_encryption = client["encryption"]
-        self.packetIO.write_packet(
-            client_socket, 
-            packet_types.EXCHANGE_PUBLIC_KEY, 
-            server_public_key_enc, 
-            key=encryption_key, 
-            encryption=use_encryption)
-        client["encryption"] = True
-        print("%s's public key is %s" %(client_name, client_public_key_enc))
-        print("The server's public key is %s" %server_public_key_enc)
 
     def handle_registration(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -266,7 +341,9 @@ class Application:
         if client["logged_in"]:
             client["username"] = None
             client["logged_in"] = False
+            self.logged_in_users.remove(username)
             logout_packet = format("Server: %s logged out\n" %username)
+            userlist_packet = ":".join(self.userlist())
             for cli_id in self.clients:
                 cli = self.clients[cli_id]
                 cli_socket = cli["client_socket"]
@@ -287,7 +364,6 @@ class Application:
                         encryption=use_encryption)
                 except socket.error as e:
                     print(e)
-            self.logged_in_users.remove(username)
             print("%s logged out\n" %username)
 
     def handle_message(self, packet, client_id):
@@ -349,8 +425,7 @@ def main():
     config = configparser.ConfigParser()
     config.read("config/server_settings.ini")
     packetIO = PacketIO()
-    packetIO.configure_log("server_log.txt", "w")
-    packetIO.enable_logging()
+    packetIO.open_log("server_log.txt", "w")
     app = Application(config, packetIO)
     app.parse_keys()
     app.load_user_db()

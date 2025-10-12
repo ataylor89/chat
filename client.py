@@ -22,21 +22,11 @@ class Client:
             "client": {"public": None, "private": None},
             "server": {"public": None, "private": None}
         }
+        self.s = None
 
     def parse_keys(self):
         self.keys["client"]["public"] = parser.parse_key("rsa/publickey.txt")
         self.keys["client"]["private"] = parser.parse_key("rsa/privatekey.txt")
-
-    def connect(self):
-        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.connect((self.host, self.port))
-
-    def disconnect(self):
-        self.s.close()
-
-    def start_readloop(self):
-        self.readloop_thread = threading.Thread(target=self.readloop)
-        self.readloop_thread.start()
 
     def readloop(self):
         done = False
@@ -55,8 +45,16 @@ class Client:
     def process(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         packet_type = packet[4]
-        if packet_type == packet_types.EXCHANGE_PUBLIC_KEY:
+        if packet_type == packet_types.CONNECT:
+            self.handle_connect(packet)
+        elif packet_type == packet_types.DISCONNECT:
+            self.handle_disconnect(packet)
+        elif packet_type == packet_types.EXCHANGE_PUBLIC_KEY:
             self.handle_exchange_public_key(packet)
+        elif packet_type == packet_types.ENCRYPTION_ON:
+            self.handle_encryption_on(packet)
+        elif packet_type == packet_types.ENCRYPTION_OFF:
+            self.handle_encryption_off(packet)
         elif packet_type == packet_types.JOIN:
             self.handle_join(packet)
         elif packet_type == packet_types.LEAVE:
@@ -76,13 +74,45 @@ class Client:
         elif packet_type == packet_types.TIME:
             self.handle_time(packet)
 
-    def exchange_public_key(self):
+    def connect(self, host, port):
+        if not self.s:
+            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.s.connect((host, port))
+            self.readloop_thread = threading.Thread(target=self.readloop)
+            self.readloop_thread.start()
+            encryption_key = self.keys["server"]["public"]
+            self.packetIO.write_packet(self.s,
+                packet_types.CONNECT,
+                None,
+                key=encryption_key,
+                encryption=self.use_encryption)
+
+    def disconnect(self):
+        self.s.close()
+        self.readloop_thread.join()
+        self.s = None
+
+    def enable_encryption(self):
+        self.parse_keys()
         client_public_key = self.keys["client"]["public"]
         client_public_key = parser.encode(client_public_key)
         encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.s, 
             packet_types.EXCHANGE_PUBLIC_KEY, 
             client_public_key,
+            key=encryption_key,
+            encryption=self.use_encryption)
+        self.packetIO.write_packet(self.s,
+            packet_types.ENCRYPTION_ON,
+            None,
+            key=encryption_key,
+            encryption=self.use_encryption)
+
+    def disable_encryption(self):
+        encryption_key = self.keys["server"]["public"]
+        self.packetIO.write_packet(self.s,
+            packet_types.ENCRYPTION_OFF,
+            None,
             key=encryption_key,
             encryption=self.use_encryption)
 
@@ -154,11 +184,32 @@ class Client:
             key=encryption_key,
             encryption=self.use_encryption)
 
+    def handle_connect(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.gui.add_message(message)
+
+    def handle_disconnect(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.gui.add_message(message)
+
     def handle_exchange_public_key(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         server_public_key = packet[5:packet_len].decode("utf-8")
         self.keys["server"]["public"] = parser.decode(server_public_key)
+
+    def handle_encryption_on(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.gui.add_message(message)
         self.use_encryption = True
+
+    def handle_encryption_off(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.gui.add_message(message)
+        self.use_encryption = False
 
     def handle_join(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -215,15 +266,32 @@ class Client:
 
     def process_command(self, message):
         cmdname = message.strip().split()[0]
-        if cmdname == "/register":
+        if cmdname == "/connect":
             tokens = message.strip().split()
-            username = tokens[1]
-            password = tokens[2]
-            self.register(username, password)
+            if len(tokens) == 3:
+                host = tokens[1]
+                port = int(tokens[2])
+                self.connect(host, port)
+            else:
+                self.connect(self.host, self.port)
+        elif cmdname == "/disconnect":
+            self.disconnect()
+        elif cmdname == "/encryption":
+            tokens = message.strip().split()
+            if len(tokens) == 2:
+                if tokens[1] == "on":
+                    self.enable_encryption()
+                elif tokens[1] == "off":
+                    self.disable_encryption()
         elif cmdname == "/join":
             self.join()
         elif cmdname == "/leave":
             self.leave()
+        elif cmdname == "/register":
+            tokens = message.strip().split()
+            username = tokens[1]
+            password = tokens[2]
+            self.register(username, password)
         elif cmdname == "/login":
             tokens = message.strip().split()
             username = tokens[1]
@@ -242,16 +310,9 @@ def main():
     config = configparser.ConfigParser()
     config.read("config/client_settings.ini")
     packetIO = PacketIO()
-    packetIO.configure_log("client_log.txt", "w")
-    packetIO.enable_logging()
+    packetIO.open_log("client_log.txt", "w")
     gui = GUI(config)
     cli = Client(config, packetIO, gui)
-    cli.parse_keys()
-    cli.connect()
-    cli.start_readloop()
-    cli.exchange_public_key()
-    while not cli.use_encryption:
-        time.sleep(1)
     gui.set_client(cli)
     gui.mainloop()
 

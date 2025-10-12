@@ -65,7 +65,6 @@ class GUI(tk.Tk):
 
     def close_application(self):
         self.client.disconnect()
-        self.client.readloop_thread.join()
         self.app_is_closing = True
         self.destroy()
 

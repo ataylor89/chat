@@ -1,4 +1,7 @@
 cmdlist = [
+    "/connect",
+    "/disconnect",
+    "/encryption",
     "/join",
     "/leave",
     "/register",
