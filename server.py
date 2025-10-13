@@ -47,7 +47,7 @@ class Server:
             thread.start()
 
     def create_client(self, client_id, client_socket, client_address):
-        client = {
+        self.clients[client_id] = {
             "client_name": format("Client-%d" %client_id),
             "client_socket": client_socket,
             "client_address": client_address,
@@ -57,8 +57,6 @@ class Server:
             "logged_in": False,
             "username": None
         }
-        self.clients[client_id] = client
-        return client
 
     def readloop(self, client_id):
         client = self.clients[client_id]
