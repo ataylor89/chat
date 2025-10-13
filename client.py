@@ -16,12 +16,13 @@ class Client:
         self.packetIO = packetIO
         self.host = config["default"]["host"]
         self.port = int(config["default"]["port"])
+        self.s = None
+        self.connected = False
         self.use_encryption = False
         self.keys = {
             "client": {"public": None, "private": None},
             "server": {"public": None, "private": None}
         }
-        self.s = None
 
     def set_gui(self, gui):
         self.gui = gui
@@ -44,6 +45,7 @@ class Client:
             except Exception as e:
                 print(e)
         self.s = None
+        self.connected = False
         self.use_encryption = False
 
     def process(self, packet):
@@ -89,6 +91,7 @@ class Client:
                 None,
                 key=None,
                 encryption=False)
+            self.connected = True
 
     def disconnect(self):
         if self.s:
@@ -99,6 +102,8 @@ class Client:
                 encryption=False)
 
     def encryption_on(self):
+        if not self.connected:
+            return
         self.parse_keys()
         client_public_key = self.keys["client"]["public"]
         client_public_key = parser.encode(client_public_key)
@@ -110,6 +115,8 @@ class Client:
             encryption=self.use_encryption)
 
     def encryption_off(self):
+        if not self.connected:
+            return
         encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.s,
             packet_types.ENCRYPTION_OFF,
@@ -118,6 +125,8 @@ class Client:
             encryption=self.use_encryption)
 
     def join(self):
+        if not self.connected:
+            return
         encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.s,
             packet_types.JOIN,
@@ -126,6 +135,8 @@ class Client:
             encryption=self.use_encryption)
 
     def leave(self):
+        if not self.connected:
+            return
         encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.s,
             packet_types.LEAVE,
@@ -134,6 +145,8 @@ class Client:
             encryption=self.use_encryption)
 
     def register(self, username, password):
+        if not self.connected:
+            return
         message = username + ":" + password
         encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.s, 
@@ -143,6 +156,8 @@ class Client:
             encryption=self.use_encryption)
 
     def login(self, username, password):
+        if not self.connected:
+            return
         message = username + ":" + password
         encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.s, 
@@ -152,6 +167,8 @@ class Client:
             encryption=self.use_encryption)
 
     def logout(self):
+        if not self.connected:
+            return
         encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.s,
             packet_types.LOGOUT,
@@ -160,6 +177,8 @@ class Client:
             encryption=self.use_encryption)
 
     def send_message(self, message):
+        if not self.connected:
+            return
         encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.s, 
             packet_types.MESSAGE, 
@@ -168,6 +187,8 @@ class Client:
             encryption=self.use_encryption)
 
     def whoami(self):
+        if not self.connected:
+            return
         encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.s,
             packet_types.WHOAMI,
@@ -176,6 +197,8 @@ class Client:
             encryption=self.use_encryption)
 
     def get_date(self):
+        if not self.connected:
+            return
         encryption_key = self.keys["server"]["public"]
         tz_name = tzlocal.get_localzone_name()
         self.packetIO.write_packet(self.s,
@@ -185,6 +208,8 @@ class Client:
             encryption=self.use_encryption)
 
     def get_time(self):
+        if not self.connected:
+            return
         encryption_key = self.keys["server"]["public"]
         tz_name = tzlocal.get_localzone_name()
         self.packetIO.write_packet(self.s,
