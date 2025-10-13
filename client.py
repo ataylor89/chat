@@ -31,6 +31,11 @@ class Client:
         self.keys["client"]["public"] = parser.parse_key("rsa/publickey.txt")
         self.keys["client"]["private"] = parser.parse_key("rsa/privatekey.txt")
 
+    def reset(self):
+        self.s = None
+        self.connected = False
+        self.use_encryption = False
+
     def readloop(self):
         done = False
         while not done:
@@ -44,9 +49,7 @@ class Client:
                 done = True
             except Exception as e:
                 print(e)
-        self.s = None
-        self.connected = False
-        self.use_encryption = False
+        self.reset()
 
     def process(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
@@ -81,7 +84,9 @@ class Client:
             self.handle_time(packet)
 
     def connect(self, host, port):
-        if not self.s:
+        if self.connected:
+            return
+        try:
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.s.connect((host, port))
             self.connected = True
@@ -92,14 +97,23 @@ class Client:
                 None,
                 key=None,
                 encryption=False)
+        except Exception as e:
+            print(e)
+            if self.s:
+                self.s.close()
+            if self.readloop_thread:
+                self.readloop_thread.join()
+            else:
+                self.reset()
 
     def disconnect(self):
-        if self.s:
-            self.packetIO.write_packet(self.s,
-                packet_types.DISCONNECT,
-                None,
-                key=None,
-                encryption=False)
+        if not self.connected:
+            return
+        self.packetIO.write_packet(self.s,
+            packet_types.DISCONNECT,
+            None,
+            key=None,
+            encryption=False)
 
     def encryption_on(self):
         if not self.connected:
