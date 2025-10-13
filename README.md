@@ -566,7 +566,7 @@ We can actually run the server in the backround with the command
 
 This way, if we log out of our SSH session, the server will still be running in the background
 
-Now, let's open a new tab in Terminal (I"m using MacOS Sequoia on an Apple M1 ARM64 chip)
+Now, let's open a new tab in Terminal (I'm using MacOS Sequoia on an Apple M1 ARM64 chip)
 
 In the new tab, cd into the chat directory
 
@@ -636,7 +636,7 @@ I was able to connect to the server, register the account, join the channel, log
 
 Now let's try sending a message
 
-I type the message "hello world" in the bottom text area, and press the <return> key
+I type the message "hello world" in the bottom text area, and press the \<return\> key
 
 The message appears in the top text area, as:
 
@@ -650,7 +650,7 @@ So, if you test it out, you might run into some problems
 
 But I was able to test the above functionality successfully
 
-I was able to connect a client on my personal MacBook to a server on my EC2 instance, turn on the encryption feature, register a username, join the chat room, log into the username, and send a "hello world" message to the chat room
+I was able to connect a client on my personal MacBook to a server on my EC2 instance, turn on the encryption feature, register a username, join the chat room, log into the account, and send a "hello world" message to the chat room
 
 In essence, I was able to deploy my chat application to AWS cloud
 
