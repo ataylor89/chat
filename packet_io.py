@@ -74,7 +74,7 @@ class PacketIO:
                 body = encrypt.encrypt(message, key)
                 body = body.encode("utf-8")
                 packet_len += len(body)
-            header = packet_len.to_bytes(4, byteorder="big") + packet_type.to_bytes(1)
+            header = packet_len.to_bytes(4, byteorder="big") + packet_type.to_bytes(1, byteorder="big")
             encrypted_packet = header + body if message else header
             s.sendall(encrypted_packet)
             if self.logger:
@@ -96,7 +96,7 @@ class PacketIO:
             if message:
                 body = message.encode("utf-8")
                 packet_len += len(body)
-            header = packet_len.to_bytes(4, byteorder="big") + packet_type.to_bytes(1)
+            header = packet_len.to_bytes(4, byteorder="big") + packet_type.to_bytes(1, byteorder="big")
             packet = header + body if message else header
             s.sendall(packet)
             if self.logger:
