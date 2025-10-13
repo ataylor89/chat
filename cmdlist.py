@@ -7,6 +7,7 @@ cmdlist = [
     "/register",
     "/login",
     "/logout",
+    "/whoami",
     "/date",
     "/time",
     "/exit"

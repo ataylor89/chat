@@ -101,6 +101,8 @@ class Server:
             self.handle_logout(packet, client_id)
         elif packet_type == packet_types.MESSAGE:
             self.handle_message(packet, client_id)
+        elif packet_type == packet_types.WHOAMI:
+            self.handle_whoami(packet, client_id)
         elif packet_type == packet_types.DATE:
             self.handle_date(packet, client_id)
         elif packet_type == packet_types.TIME:
@@ -371,6 +373,29 @@ class Server:
             except socket.error as e:
                 print(e)
         print(packet_body, end="")
+
+    def handle_whoami(self, packet, client_id):
+        client = self.clients[client_id]
+        client_name = client["client_name"]
+        client_socket = client["client_socket"]
+        client_address = client["client_address"]
+        client_ip = client_address[0]
+        client_port = client_address[1]
+        username = client["username"] if client["username"] else "None"
+        encryption_key = client["public_key"]
+        use_encryption = client["encryption"]
+        format_str = "Server: whoami results\n"
+        format_str += "client_name=%s\n"
+        format_str += "client_ip=%s\n"
+        format_str += "client_port=%d\n"
+        format_str += "username=%s\n"
+        packet_body = format(format_str %(client_name, client_ip, client_port, username))
+        self.packetIO.write_packet(
+            client_socket,
+            packet_types.WHOAMI,
+            packet_body,
+            key=encryption_key,
+            encryption=use_encryption)
 
     def handle_date(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)

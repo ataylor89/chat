@@ -71,6 +71,8 @@ class Client:
             self.handle_userlist(packet)
         elif packet_type == packet_types.MESSAGE:
             self.handle_message(packet)
+        elif packet_type == packet_types.WHOAMI:
+            self.handle_whoami(packet)
         elif packet_type == packet_types.DATE:
             self.handle_date(packet)
         elif packet_type == packet_types.TIME:
@@ -162,6 +164,14 @@ class Client:
         self.packetIO.write_packet(self.s, 
             packet_types.MESSAGE, 
             message,
+            key=encryption_key,
+            encryption=self.use_encryption)
+
+    def whoami(self):
+        encryption_key = self.keys["server"]["public"]
+        self.packetIO.write_packet(self.s,
+            packet_types.WHOAMI,
+            None,
             key=encryption_key,
             encryption=self.use_encryption)
 
@@ -262,6 +272,11 @@ class Client:
         message = packet[5:packet_len].decode("utf-8")
         self.gui.add_message(message)
 
+    def handle_whoami(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        message = packet[5:packet_len].decode("utf-8")
+        self.gui.add_message(message)
+
     def handle_date(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         message = packet[5:packet_len].decode("utf-8")
@@ -312,6 +327,8 @@ class Client:
             self.login(username, password)
         elif cmdname == "/logout":
             self.logout()
+        elif cmdname == "/whoami":
+            self.whoami()
         elif cmdname == "/date":
             self.get_date()
         elif cmdname == "/time":
