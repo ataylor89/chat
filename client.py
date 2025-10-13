@@ -99,12 +99,6 @@ class Client:
                 encryption=False)
         except Exception as e:
             print(e)
-            if self.s:
-                self.s.close()
-            if self.readloop_thread:
-                self.readloop_thread.join()
-            else:
-                self.reset()
 
     def disconnect(self):
         if not self.connected:
