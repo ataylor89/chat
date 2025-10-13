@@ -171,9 +171,9 @@ Now there is just one more step we have to take
 
 We can modify the server_settings.ini file inside the config folder to look like this:
 
-[default]
-host = 0.0.0.0
-port = 12345
+    [default]
+    host = 0.0.0.0
+    port = 12345
 
 The IP addresses 0.0.0.0 and 127.0.0.1 mean slightly different things
 
