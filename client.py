@@ -84,6 +84,7 @@ class Client:
         if not self.s:
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.s.connect((host, port))
+            self.connected = True
             self.readloop_thread = threading.Thread(target=self.readloop)
             self.readloop_thread.start()
             self.packetIO.write_packet(self.s,
@@ -91,7 +92,6 @@ class Client:
                 None,
                 key=None,
                 encryption=False)
-            self.connected = True
 
     def disconnect(self):
         if self.s:
