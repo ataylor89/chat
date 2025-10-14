@@ -23,6 +23,14 @@ class Client:
             "client": {"public": None, "private": None},
             "server": {"public": None, "private": None}
         }
+        self.profile = {
+            "active": False,
+            "logged_in": False,
+            "client_name": None,
+            "client_ip": None,
+            "client_port": None,
+            "username": None
+        }
 
     def set_gui(self, gui):
         self.gui = gui
@@ -72,6 +80,8 @@ class Client:
             self.handle_login(packet)
         elif packet_type == packet_types.LOGOUT:
             self.handle_logout(packet)
+        elif packet_type == packet_types.PROFILE:
+            self.handle_profile(packet)
         elif packet_type == packet_types.USERLIST:
             self.handle_userlist(packet)
         elif packet_type == packet_types.MESSAGE:
@@ -291,6 +301,17 @@ class Client:
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         message = packet[5:packet_len].decode("utf-8")
         self.gui.add_message(message)
+
+    def handle_profile(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
+        body = packet[5:packet_len].decode("utf-8")
+        tokens = body.split(":")
+        self.profile["active"] = tokens[0][7:] == "True"
+        self.profile["logged_in"] = tokens[0][10:] == "True"
+        self.profile["client_name"] = tokens[0][12:]
+        self.profile["client_ip"] = tokens[0][10:]
+        self.profile["client_port"] = int(tokens[0][12:])
+        self.profile["username"] = tokens[0][9:] if tokens[0][9:] != "None" else None
 
     def handle_userlist(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
