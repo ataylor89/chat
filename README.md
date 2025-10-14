@@ -725,3 +725,110 @@ Today is Sunday October 12 2025
 Thanks for reading
 
 Andrew
+
+## Running the server in the background with screen
+
+I spent some more time testing my chat server today
+
+I ran my server.py file in the background on AWS cloud
+
+It worked fine, while I was logged into my EC2 instance over SSH
+
+But as soon as I logged out of my EC2 instance, it stopped working
+
+Frustrated, I set out to find a solution to the problem
+
+I did some research on Google
+
+I figured out that I can run my chat server in the background using the screen utility
+
+I logged into my EC2 instance over ssh
+
+    % ssh -i ~/myserver.pem ec2-user@<public-ipv4-address>
+
+I downloaded the most recent code using my download.sh script
+
+I made sure that the host address in config/server_settings.ini was set to 0.0.0.0
+
+I cd'd into my chat folder
+
+    $ cd chat
+
+Then I started a screen session
+
+    $ screen
+
+In my screen session, I ran the chat server in the background
+
+    $ python server.py &
+
+Then I typed the key sequence "ctrl+a d" (without the quotes) to detach from my screen session
+
+To be clear, I held down ctrl, pressed a, then released ctrl, and pressed d
+
+ctrl+a d
+
+This key sequence detaches the screen
+
+After I detached the screen, I exited ssh
+
+    $ exit
+    logout
+    Connection to ww.xx.yy.zz closed.
+
+I switched to a different tab in my Terminal (I currently have 6 tabs open in my Terminal application)
+
+I made sure that I was in the chat directory on my local machine (my personal MacBook) and that it has the latest code
+
+Then I started up the client
+
+    % python client.py
+
+I connected to the server, by typing the following command in the lower text area
+
+    /connect ww.xx.yy.zz 12345
+
+The variable ww.xx.yy.zz stands for the public IPv4 address of my EC2 instance
+
+It connected just fine
+
+Then I turned encryption on
+
+    /encryption on
+
+Then I logged in
+
+    /login ktm5124 thisisatestpw
+
+Then I joined the channel
+
+    /join
+
+I saw a welcome message appear in the chat box
+
+I saw my username appear in the userlist on the right
+
+I tested it out some more
+
+I concluded that it was working fine
+
+So listen...
+
+Earlier, I was having a problem where my chat server stopped being responsive after I logged out of SSH
+
+I was able to solve the problem by running my chat server in the background in a screen session
+
+If you don't have screen installed, you can download it with this command on your EC2 instance
+
+    yum install screen -y
+
+So... the solution is to use screen
+
+Now I can run my server in the background, on my EC2 instance, in a screen session, and I can log out of the EC2 instance, and connect to the server from my local machine (my personal MacBook)... and everything works fine
+
+So, the conclusion is this:
+
+1. I was able to solve the problem by running the chat server in the background in a screen session on my EC2 instance
+2. Everything still works fine after I log out of the EC2 instance, because it's running in a screen session
+
+I wanted to type up this solution, because it works for me, and it might work for others
