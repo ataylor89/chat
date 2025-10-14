@@ -232,7 +232,6 @@ class Server:
         client = self.clients[client_id]
         username = client["username"] if client["username"] else client["client_name"]
         client["active"] = False
-        client["logged_in"] = False
         leave_packet = format("Server: %s left the chat room\n" %username)
         userlist_packet = ":".join(self.userlist())
         for cli_id in self.clients:
