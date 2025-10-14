@@ -305,11 +305,11 @@ class Client:
         body = packet[5:packet_len].decode("utf-8")
         tokens = body.split(":")
         self.active = tokens[0][7:] == "True"
-        self.logged_in = tokens[0][10:] == "True"
-        self.client_name = tokens[0][12:]
-        self.client_ip = tokens[0][10:]
-        self.client_port = int(tokens[0][12:])
-        self.username = tokens[0][9:] if tokens[0][9:] != "None" else None
+        self.logged_in = tokens[1][10:] == "True"
+        self.client_name = tokens[2][12:]
+        self.client_ip = tokens[3][10:]
+        self.client_port = int(tokens[4][12:])
+        self.username = tokens[5][9:] if tokens[5][9:] != "None" else None
 
     def handle_userlist(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
