@@ -129,6 +129,7 @@ class Server:
             packet_body,
             key=encryption_key,
             encryption=use_encryption)
+        self.handle_profile(packet, client_id)
         print("%s has connected to the server" %client_name)
 
     def handle_disconnect(self, packet, client_id):
@@ -214,6 +215,7 @@ class Server:
                     encryption=use_encryption)
             except socket.error as e:
                 print(e)
+        self.handle_profile(packet, client_id)
         print("%s joined the chat room" %client_name)
 
     def handle_leave(self, packet, client_id):
@@ -245,6 +247,7 @@ class Server:
                     encryption=use_encryption)
             except socket.error as e:
                 print(e)
+        self.handle_profile(packet, client_id)
         print("%s left the chat room" %username)
 
     def handle_registration(self, packet, client_id):
@@ -307,6 +310,7 @@ class Server:
                     key=encryption_key,
                     encryption=use_encryption)
             self.logged_in_users.append(username)
+            self.handle_profile(packet, client_id)
             print("%s logged in as %s" %(client_name, username))
         else:
             login_packet = format("Server: Unable to login as %s\n" %username)
@@ -349,7 +353,29 @@ class Server:
                         encryption=use_encryption)
                 except socket.error as e:
                     print(e)
+            self.handle_profile(packet, client_id)
             print("%s logged out\n" %username)
+
+    def handle_profile(self, packet, client_id):
+        client = self.clients[client_id]
+        client_name = client["client_name"]
+        client_socket = client["client_socket"]
+        client_address = client["client_address"]
+        client_ip = client_address[0]
+        client_port = client_address[1]
+        active = client["active"]
+        logged_in = client["logged_in"]
+        username = client["username"] if client["username"] else "None"
+        format_str = "active=%s:logged_in=%s:client_name=%s:client_ip=%s:client_port=%d:username=%s"
+        profile_packet = format(format_str %(active, logged_in, client_name, client_ip, client_port, username))
+        encryption_key = client["public_key"]
+        use_encryption = client["encryption"]
+        self.packetIO.write_packet(
+            client_socket,
+            packet_types.PROFILE,
+            profile_packet,
+            key=encryption_key,
+            encryption=use_encryption)
 
     def handle_message(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
