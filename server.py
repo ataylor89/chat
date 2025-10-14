@@ -202,7 +202,8 @@ class Server:
         client = self.clients[client_id]
         client["active"] = True
         client_name = client["client_name"]
-        join_packet = format("Server: %s joined the chat room\n" %client_name)
+        username = client["username"] if client["username"] else client_name
+        join_packet = format("Server: %s joined the chat room\n" %username)
         userlist_packet = ":".join(self.userlist())
         for cli_id in self.clients:
             cli = self.clients[cli_id] 
@@ -225,7 +226,7 @@ class Server:
             except socket.error as e:
                 print(e)
         self.handle_profile(packet, client_id)
-        print("%s joined the chat room" %client_name)
+        print("%s joined the chat room" %username)
 
     def handle_leave(self, packet, client_id):
         client = self.clients[client_id]
