@@ -151,7 +151,7 @@ class Client:
             encryption=self.use_encryption)
 
     def leave(self):
-        if not self.connected:
+        if not self.connected or not self.active:
             return
         encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.s,
@@ -183,7 +183,7 @@ class Client:
             encryption=self.use_encryption)
 
     def logout(self):
-        if not self.connected:
+        if not self.connected or not self.logged_in:
             return
         encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.s,
@@ -193,7 +193,7 @@ class Client:
             encryption=self.use_encryption)
 
     def send_message(self, message):
-        if not self.connected:
+        if not self.connected or not self.active:
             return
         encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.s, 
