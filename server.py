@@ -15,7 +15,6 @@ class Server:
         self.port = int(config["default"]["port"])
         self.clients = {}
         self.users = {}
-        self.logged_in_users = []
         self.rsa_keys = {}
         self.packetIO = packetIO
 
@@ -112,6 +111,16 @@ class Server:
             client = self.clients[client_id]
             if client["active"]:
                 username = client["username"] if client["username"] else client["client_name"]
+                ul.append(username)
+        ul.sort()
+        return ul
+
+    def logged_in_users(self):
+        ul = []
+        for client_id in self.clients:
+            client = self.clients[client_id]
+            if client["logged_in"]:
+                username = client["username"]
                 ul.append(username)
         ul.sort()
         return ul
@@ -221,8 +230,6 @@ class Server:
     def handle_leave(self, packet, client_id):
         client = self.clients[client_id]
         username = client["username"] if client["username"] else client["client_name"]
-        if client["logged_in"]:
-            self.logged_in_users.remove(username)
         client["active"] = False
         client["logged_in"] = False
         leave_packet = format("Server: %s left the chat room\n" %username)
@@ -287,7 +294,7 @@ class Server:
         tokens = packet[5:packet_len].decode("utf-8").split(":", 1)
         username = tokens[0]
         password = tokens[1] 
-        if username in self.users and password == self.users[username]["password"] and username not in self.logged_in_users:
+        if username in self.users and password == self.users[username]["password"] and username not in self.logged_in_users():
             client["username"] = username
             client["logged_in"] = True
             login_packet = format("Server: %s logged in as %s\n" %(client_name, username))
@@ -309,7 +316,6 @@ class Server:
                     userlist_packet,
                     key=encryption_key,
                     encryption=use_encryption)
-            self.logged_in_users.append(username)
             self.handle_profile(packet, client_id)
             print("%s logged in as %s" %(client_name, username))
         else:
@@ -330,7 +336,6 @@ class Server:
         if client["logged_in"]:
             client["username"] = None
             client["logged_in"] = False
-            self.logged_in_users.remove(username)
             logout_packet = format("Server: %s logged out\n" %username)
             userlist_packet = ":".join(self.userlist())
             for cli_id in self.clients:
