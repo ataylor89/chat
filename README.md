@@ -112,7 +112,7 @@ Furthermore, I have an inbound rule that allows SSH traffic from anywhere (0.0.0
 
 So my inbound rules consist of those three rules:
 
-1. The first rule allows HTTP traffic from anywhere to access port 89
+1. The first rule allows HTTP traffic from anywhere to access port 80
 2. The second rule allows Custom TCP traffic from anywhere to access port 12345
 3. The third rule allows SSH traffic from anywhere to access port 22
 
