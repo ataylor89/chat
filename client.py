@@ -27,7 +27,7 @@ class Client:
         self.logged_in = False
         self.client_name = None
         self.client_ip = None
-        self.port = None
+        self.client_port = None
         self.username = None
 
     def set_gui(self, gui):
