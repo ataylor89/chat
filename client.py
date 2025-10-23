@@ -37,11 +37,6 @@ class Client:
         self.keys["client"]["public"] = parser.parse_key("rsa/publickey.txt")
         self.keys["client"]["private"] = parser.parse_key("rsa/privatekey.txt")
 
-    def reset(self):
-        self.s = None
-        self.connected = False
-        self.use_encryption = False
-
     def readloop(self):
         done = False
         while not done:
@@ -55,7 +50,9 @@ class Client:
                 done = True
             except Exception as e:
                 print(e)
-        self.reset()
+        self.s = None
+        self.connected = False
+        self.use_encryption = False
 
     def process(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
