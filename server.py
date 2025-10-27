@@ -13,7 +13,7 @@ class Server:
         self.host = config["default"]["host"]
         self.port = int(config["default"]["port"])
         self.packetIO = PacketIO()
-        self.packetIO.open_log(config["default"]["logfile"], "w")
+        self.packetIO.open_log(config["default"]["logfile"], config["default"]["logmode"])
         self.clients = {}
 
     def listen(self):
