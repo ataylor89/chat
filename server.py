@@ -16,11 +16,6 @@ class Server:
         self.packetIO = packetIO
         self.clients = {}
         self.users = {}
-        self.rsa_keys = {}
-
-    def parse_keys(self):
-        self.rsa_keys["public"] = parser.parse_key("rsa/publickey.txt")
-        self.rsa_keys["private"] = parser.parse_key("rsa/privatekey.txt")
 
     def load_user_db(self, path="users.pickle"):
         if os.path.exists(path):
@@ -60,7 +55,7 @@ class Server:
     def readloop(self, client_id):
         client = self.clients[client_id]
         client_socket = client["client_socket"]
-        decryption_key = self.rsa_keys["private"]
+        decryption_key = parser.parse_key("rsa/privatekey.txt")
         done = False
         while not done:
             try:
@@ -465,7 +460,6 @@ def main():
     packetIO = PacketIO()
     packetIO.open_log("server_log.txt", "w")
     server = Server(config, packetIO)
-    server.parse_keys()
     server.load_user_db()
     server.listen()
 
