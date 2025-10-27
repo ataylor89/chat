@@ -2,23 +2,25 @@ import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
 
 class GUI(tk.Tk):
-    def __init__(self, config, client):
+    def __init__(self, config):
         tk.Tk.__init__(self)
         self.config = config
-        self.client = client
         self.title(config["default"]["title"])
-        self.protocol("WM_DELETE_WINDOW", self.client.exit)
         self.resizable(False, False)
+        self.protocol("WM_DELETE_WINDOW", self.handle_close)
+        self.app_is_closing = False
+        self.create_widgets()
+
+    def set_client(self, client):
+        self.client = client
+
+    def create_widgets(self):
+        bgcolor = self.config["default"]["bg"]
+        fgcolor = self.config["default"]["fg"]
+        fontname = self.config["default"]["fontname"]
+        fontsize = int(self.config["default"]["fontsize"])
         self.frame = tk.Frame(self)
         self.frame.pack(fill="both", expand=True)
-        self.create_widgets(config)
-        self.app_is_closing = False
-
-    def create_widgets(self, config):
-        bgcolor = config["default"]["bg"]
-        fgcolor = config["default"]["fg"]
-        fontname = config["default"]["fontname"]
-        fontsize = int(config["default"]["fontsize"])
         self.chat_ta = ScrolledText(self.frame,
             width=80,
             height=30,
@@ -69,3 +71,6 @@ class GUI(tk.Tk):
 
     def add_user(self, username):
         self.userlist_lb.insert(tk.END, username)
+
+    def handle_close(self):
+        self.client.exit()

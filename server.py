@@ -52,7 +52,6 @@ class Server:
                 if packet:
                     self.process(packet, client_id)
             except socket.error as e:
-                print(e)
                 done = True
             except Exception as e:
                 print(e)
@@ -329,7 +328,7 @@ class Server:
                 except socket.error as e:
                     print(e)
             self.handle_profile(packet, client_id)
-            print("%s logged out\n" %username)
+            print("%s logged out" %username)
 
     def handle_profile(self, packet, client_id):
         client = self.clients[client_id]

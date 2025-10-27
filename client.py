@@ -11,24 +11,25 @@ import tzlocal
 import configparser
 
 class Client:
-    def __init__(self, config, packetIO):
+    def __init__(self, config):
         self.config = config
-        self.packetIO = packetIO
         self.host = config["default"]["host"]
         self.port = int(config["default"]["port"])
+        self.packetIO = PacketIO()
+        self.packetIO.open_log(config["default"]["logfile"], config["default"]["logmode"])
         self.s = None
         self.connected = False
         self.use_encryption = False
-        self.keys = {
-            "client": {"public": None, "private": None},
-            "server": {"public": None, "private": None}
-        }
         self.active = False
         self.logged_in = False
         self.client_name = None
         self.client_ip = None
         self.client_port = None
         self.username = None
+        self.keys = {
+            "client": {"public": None, "private": None},
+            "server": {"public": None, "private": None}
+        }
 
     def set_gui(self, gui):
         self.gui = gui
@@ -46,7 +47,6 @@ class Client:
                 if packet:
                     self.process(packet)
             except socket.error as e:
-                print(e)
                 done = True
             except Exception as e:
                 print(e)
@@ -119,11 +119,11 @@ class Client:
             return
         self.parse_keys()
         client_public_key = self.keys["client"]["public"]
-        client_public_key = parser.encode(client_public_key)
+        client_public_key_enc = parser.encode(client_public_key)
         encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.s,
             packet_types.ENCRYPTION_ON,
-            client_public_key,
+            client_public_key_enc,
             key=encryption_key,
             encryption=self.use_encryption)
 
@@ -388,10 +388,9 @@ class Client:
 def main():
     config = configparser.ConfigParser()
     config.read("config/client_settings.ini")
-    packetIO = PacketIO()
-    packetIO.open_log("client_log.txt", "w")
-    cli = Client(config, packetIO)
-    gui = GUI(config, cli)
+    cli = Client(config)
+    gui = GUI(config)
+    gui.set_client(cli)
     cli.set_gui(gui)
     gui.mainloop()
 
