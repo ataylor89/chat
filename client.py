@@ -18,8 +18,8 @@ class Client:
         self.host = config["default"]["host"]
         self.port = int(config["default"]["port"])
         self.s = None
-        self.connected = False
         self.use_encryption = False
+        self.connected = False
         self.active = False
         self.logged_in = False
         self.client_name = None
