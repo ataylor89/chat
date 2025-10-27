@@ -17,7 +17,7 @@ class Client:
         self.packetIO.open_log(config["default"]["logfile"], config["default"]["logmode"])
         self.host = config["default"]["host"]
         self.port = int(config["default"]["port"])
-        self.s = None
+        self.sock = None
         self.use_encryption = False
         self.connected = False
         self.active = False
@@ -43,14 +43,14 @@ class Client:
         while not done:
             try:
                 decryption_key = self.keys["client"]["private"]
-                packet = self.packetIO.read_packet(self.s, key=decryption_key, encryption=self.use_encryption)
+                packet = self.packetIO.read_packet(self.sock, key=decryption_key, encryption=self.use_encryption)
                 if packet:
                     self.process(packet)
             except socket.error as e:
                 done = True
             except Exception as e:
                 print(e)
-        self.s = None
+        self.sock = None
         self.connected = False
         self.use_encryption = False
 
@@ -91,12 +91,12 @@ class Client:
         if self.connected:
             return
         try:
-            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.s.connect((host, port))
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sock.connect((host, port))
             self.connected = True
             self.readloop_thread = threading.Thread(target=self.readloop)
             self.readloop_thread.start()
-            self.packetIO.write_packet(self.s,
+            self.packetIO.write_packet(self.sock,
                 packet_types.CONNECT,
                 None,
                 key=None,
@@ -107,7 +107,7 @@ class Client:
     def disconnect(self):
         if not self.connected:
             return
-        self.packetIO.write_packet(self.s,
+        self.packetIO.write_packet(self.sock,
             packet_types.DISCONNECT,
             None,
             key=None,
@@ -120,7 +120,7 @@ class Client:
         client_public_key = self.keys["client"]["public"]
         client_public_key_enc = parser.encode(client_public_key)
         encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.s,
+        self.packetIO.write_packet(self.sock,
             packet_types.ENCRYPTION_ON,
             client_public_key_enc,
             key=encryption_key,
@@ -130,7 +130,7 @@ class Client:
         if not self.connected:
             return
         encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.s,
+        self.packetIO.write_packet(self.sock,
             packet_types.ENCRYPTION_OFF,
             None,
             key=encryption_key,
@@ -140,7 +140,7 @@ class Client:
         if not self.connected:
             return
         encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.s,
+        self.packetIO.write_packet(self.sock,
             packet_types.JOIN,
             None,
             key=encryption_key,
@@ -150,7 +150,7 @@ class Client:
         if not self.connected or not self.active:
             return
         encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.s,
+        self.packetIO.write_packet(self.sock,
             packet_types.LEAVE,
             None,
             key=encryption_key,
@@ -161,7 +161,7 @@ class Client:
             return
         message = username + ":" + password
         encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.s, 
+        self.packetIO.write_packet(self.sock,
             packet_types.REGISTER, 
             message,
             key=encryption_key,
@@ -172,7 +172,7 @@ class Client:
             return
         message = username + ":" + password
         encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.s, 
+        self.packetIO.write_packet(self.sock,
             packet_types.LOGIN, 
             message,
             key=encryption_key,
@@ -182,7 +182,7 @@ class Client:
         if not self.connected or not self.logged_in:
             return
         encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.s,
+        self.packetIO.write_packet(self.sock,
             packet_types.LOGOUT,
             None,
             key=encryption_key,
@@ -192,7 +192,7 @@ class Client:
         if not self.connected or not self.active:
             return
         encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.s, 
+        self.packetIO.write_packet(self.sock,
             packet_types.MESSAGE, 
             message,
             key=encryption_key,
@@ -202,7 +202,7 @@ class Client:
         if not self.connected:
             return
         encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.s,
+        self.packetIO.write_packet(self.sock,
             packet_types.WHOAMI,
             None,
             key=encryption_key,
@@ -213,7 +213,7 @@ class Client:
             return
         encryption_key = self.keys["server"]["public"]
         tz_name = tzlocal.get_localzone_name()
-        self.packetIO.write_packet(self.s,
+        self.packetIO.write_packet(self.sock,
             packet_types.DATE,
             tz_name,
             key=encryption_key,
@@ -224,20 +224,20 @@ class Client:
             return
         encryption_key = self.keys["server"]["public"]
         tz_name = tzlocal.get_localzone_name()
-        self.packetIO.write_packet(self.s,
+        self.packetIO.write_packet(self.sock,
             packet_types.TIME,
             tz_name,
             key=encryption_key,
             encryption=self.use_encryption)
 
     def exit(self):
-        if self.s:
-            self.packetIO.write_packet(self.s,
+        if self.sock:
+            self.packetIO.write_packet(self.sock,
                 packet_types.DISCONNECT,
                 None,
                 key=None,
                 encryption=False)
-            self.s.close()
+            self.sock.close()
             self.readloop_thread.join()
         self.gui.app_is_closing = True
         self.gui.destroy()
@@ -251,8 +251,8 @@ class Client:
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         message = packet[5:packet_len].decode("utf-8")
         self.gui.add_message(message)
-        if self.s:
-            self.s.close()
+        if self.sock:
+            self.sock.close()
 
     def handle_encryption_on(self, packet):
         packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
