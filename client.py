@@ -13,10 +13,10 @@ import configparser
 class Client:
     def __init__(self, config):
         self.config = config
-        self.host = config["default"]["host"]
-        self.port = int(config["default"]["port"])
         self.packetIO = PacketIO()
         self.packetIO.open_log(config["default"]["logfile"], config["default"]["logmode"])
+        self.host = config["default"]["host"]
+        self.port = int(config["default"]["port"])
         self.s = None
         self.connected = False
         self.use_encryption = False
