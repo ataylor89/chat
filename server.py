@@ -10,10 +10,12 @@ from rsa import parser
 import configparser
 
 class Server:
-    def __init__(self, config, packetIO):
+    def __init__(self, config):
         self.host = config["default"]["host"]
         self.port = int(config["default"]["port"])
-        self.packetIO = packetIO
+        self.logfile = config["default"]["logfile"]
+        self.packetIO = PacketIO()
+        self.packetIO.open_log(self.logfile, "w")
         self.clients = {}
         self.users = {}
 
@@ -457,9 +459,7 @@ class Server:
 def main():
     config = configparser.ConfigParser()
     config.read("config/server_settings.ini")
-    packetIO = PacketIO()
-    packetIO.open_log("server_log.txt", "w")
-    server = Server(config, packetIO)
+    server = Server(config)
     server.load_user_db()
     server.listen()
 
