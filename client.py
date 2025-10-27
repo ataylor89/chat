@@ -96,22 +96,24 @@ class Client:
             self.connected = True
             self.readloop_thread = threading.Thread(target=self.readloop)
             self.readloop_thread.start()
+            encryption_key = self.keys["server"]["public"]
             self.packetIO.write_packet(self.sock,
                 packet_types.CONNECT,
                 None,
-                key=None,
-                encryption=False)
+                key=encryption_key,
+                encryption=self.use_encryption)
         except Exception as e:
             print(e)
 
     def disconnect(self):
         if not self.connected:
             return
+        encryption_key = self.keys["server"]["public"]
         self.packetIO.write_packet(self.sock,
             packet_types.DISCONNECT,
             None,
-            key=None,
-            encryption=False)
+            key=encryption_key,
+            encryption=self.use_encryption)
 
     def encryption_on(self):
         if not self.connected:
@@ -232,11 +234,12 @@ class Client:
 
     def exit(self):
         if self.sock:
+            encryption_key = self.keys["server"]["public"]
             self.packetIO.write_packet(self.sock,
                 packet_types.DISCONNECT,
                 None,
-                key=None,
-                encryption=False)
+                key=encryption_key,
+                encryption=self.use_encryption)
             self.sock.close()
             self.readloop_thread.join()
         self.gui.app_is_closing = True
