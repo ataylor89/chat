@@ -13,10 +13,10 @@ class Server:
     def __init__(self, config, packetIO):
         self.host = config["default"]["host"]
         self.port = int(config["default"]["port"])
+        self.packetIO = packetIO
         self.clients = {}
         self.users = {}
         self.rsa_keys = {}
-        self.packetIO = packetIO
 
     def parse_keys(self):
         self.rsa_keys["public"] = parser.parse_key("rsa/publickey.txt")
@@ -76,7 +76,6 @@ class Server:
         del self.clients[client_id]
 
     def process(self, packet, client_id):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         packet_type = packet[4]
         if packet_type == packet_types.CONNECT:
             self.handle_connect(packet, client_id)
