@@ -1,9 +1,8 @@
 from packet_io import PacketIO
 import packet_types
+import users
 import socket
 import threading
-import pickle
-import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from rsa import parser
@@ -13,22 +12,9 @@ class Server:
     def __init__(self, config):
         self.host = config["default"]["host"]
         self.port = int(config["default"]["port"])
-        self.logfile = config["default"]["logfile"]
         self.packetIO = PacketIO()
-        self.packetIO.open_log(self.logfile, "w")
+        self.packetIO.open_log(config["default"]["logfile"], "w")
         self.clients = {}
-        self.users = {}
-
-    def load_user_db(self, path="users.pickle"):
-        if os.path.exists(path):
-            with open(path, "rb") as file:
-                self.users.clear()
-                self.users.update(pickle.load(file))
-
-    def save_user_db(self, path="users.pickle"):
-        if len(self.users) > 0:
-            with open(path, "wb") as file:
-                pickle.dump(self.users, file)
 
     def listen(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -107,16 +93,6 @@ class Server:
             client = self.clients[client_id]
             if client["active"]:
                 username = client["username"] if client["username"] else client["client_name"]
-                ul.append(username)
-        ul.sort()
-        return ul
-
-    def logged_in_users(self):
-        ul = []
-        for client_id in self.clients:
-            client = self.clients[client_id]
-            if client["logged_in"]:
-                username = client["username"]
                 ul.append(username)
         ul.sort()
         return ul
@@ -262,7 +238,7 @@ class Server:
         tokens = packet[5:packet_len].decode("utf-8").split(":", 1)
         username = tokens[0]
         password = tokens[1]
-        if username in self.users:
+        if users.register(username, password):
             print("Unable to register username %s because it is already taken" %username)
             message = format("Server: The username %s is already taken\n" %username)
             self.packetIO.write_packet(
@@ -272,8 +248,6 @@ class Server:
                 key=encryption_key,
                 encryption=use_encryption)
         else:
-            self.users[username] = {"password": password, "registration_dt": datetime.now()}
-            self.save_user_db()
             print("The username %s was successfully registered" %username)
             message = format("Server: The username %s was successfully registered\n" %username)
             self.packetIO.write_packet(
@@ -290,7 +264,7 @@ class Server:
         tokens = packet[5:packet_len].decode("utf-8").split(":", 1)
         username = tokens[0]
         password = tokens[1] 
-        if username in self.users and password == self.users[username]["password"] and username not in self.logged_in_users():
+        if not client["logged_in"] and users.attempt_login(username, password):
             client["username"] = username
             client["logged_in"] = True
             login_packet = format("Server: %s logged in as %s\n" %(client_name, username))
@@ -460,7 +434,6 @@ def main():
     config = configparser.ConfigParser()
     config.read("config/server_settings.ini")
     server = Server(config)
-    server.load_user_db()
     server.listen()
 
 if __name__ == "__main__":
