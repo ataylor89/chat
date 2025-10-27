@@ -55,7 +55,6 @@ class Client:
         self.use_encryption = False
 
     def process(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
         packet_type = packet[4]
         if packet_type == packet_types.CONNECT:
             self.handle_connect(packet)
