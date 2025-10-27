@@ -204,7 +204,6 @@ class Server:
         username = client["username"] if client["username"] else client["client_name"]
         client["active"] = False
         leave_packet = format("Server: %s left the chat room\n" %username)
-        userlist_packet = ":".join(self.userlist())
         for cli_id in self.clients:
             cli = self.clients[cli_id]
             cli_socket = cli["client_socket"]
@@ -215,12 +214,6 @@ class Server:
                     cli_socket,
                     packet_types.LEAVE,
                     leave_packet,
-                    key=encryption_key,
-                    encryption=use_encryption)
-                self.packetIO.write_packet(
-                    cli_socket,
-                    packet_types.USERLIST,
-                    userlist_packet,
                     key=encryption_key,
                     encryption=use_encryption)
             except socket.error as e:
