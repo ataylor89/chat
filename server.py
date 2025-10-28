@@ -20,7 +20,7 @@ class Server:
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen()
-        client_id = 0
+        client_id = 1
         while True:
             client_socket, client_address = self.server_socket.accept()
             self.create_client(client_id, client_socket, client_address)
