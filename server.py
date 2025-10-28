@@ -23,10 +23,10 @@ class Server:
         client_id = 0
         while True:
             client_socket, client_address = self.server_socket.accept()
-            client_id += 1
             self.create_client(client_id, client_socket, client_address)
             thread = threading.Thread(target=self.readloop, args=(client_id,))
             thread.start()
+            client_id += 1
 
     def create_client(self, client_id, client_socket, client_address):
         self.clients[client_id] = {
