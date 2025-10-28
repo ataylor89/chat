@@ -231,8 +231,8 @@ class Server:
         username = tokens[0]
         password = tokens[1]
         if users.register(username, password):
-            print("Unable to register username %s because it is already taken" %username)
-            message = format("Server: The username %s is already taken\n" %username)
+            print("The username %s was successfully registered" %username)
+            message = format("Server: The username %s was successfully registered\n" %username)
             self.packetIO.write_packet(
                 client_socket, 
                 packet_types.REGISTER, 
@@ -240,8 +240,8 @@ class Server:
                 key=encryption_key,
                 encryption=use_encryption)
         else:
-            print("The username %s was successfully registered" %username)
-            message = format("Server: The username %s was successfully registered\n" %username)
+            print("Unable to register username %s because it is already taken" %username)
+            message = format("Server: The username %s is already taken\n" %username)
             self.packetIO.write_packet(
                 client_socket, 
                 packet_types.REGISTER, 
