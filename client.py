@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from gui import GUI
 from packet_io import PacketIO
 import packet_types
@@ -9,6 +11,7 @@ import time
 from datetime import datetime
 import tzlocal
 import configparser
+import sys
 
 class Client:
     def __init__(self, config):
@@ -35,8 +38,8 @@ class Client:
         self.gui = gui
 
     def parse_keys(self):
-        self.keys["client"]["public"] = parser.parse_key("rsa/publickey.txt")
-        self.keys["client"]["private"] = parser.parse_key("rsa/privatekey.txt")
+        self.keys["client"]["public"] = parser.parse_key(f"{sys.path[0]}/rsa/publickey.txt")
+        self.keys["client"]["private"] = parser.parse_key(f"{sys.path[0]}/rsa/privatekey.txt")
 
     def readloop(self):
         done = False
@@ -391,7 +394,8 @@ class Client:
 
 def main():
     config = configparser.ConfigParser()
-    config.read("config/client_settings.ini")
+    config_file = f"{sys.path[0]}/config/client_settings.ini"
+    config.read(config_file)
     cli = Client(config)
     gui = GUI(config)
     gui.set_client(cli)
