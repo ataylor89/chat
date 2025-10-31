@@ -1,4 +1,5 @@
 from packet_io import PacketIO
+from users import UserDao
 import packet_types
 import users
 import socket
@@ -14,6 +15,8 @@ class Server:
         self.port = int(config["default"]["port"])
         self.packetIO = PacketIO()
         self.packetIO.open_log(config["default"]["logfile"], config["default"]["logmode"])
+        self.userDao = UserDao()
+        self.userDao.load_user_db()
         self.clients = {}
 
     def listen(self):
@@ -230,7 +233,7 @@ class Server:
         tokens = packet[5:packet_len].decode("utf-8").split(":", 1)
         username = tokens[0]
         password = tokens[1]
-        if users.register(username, password):
+        if self.userDao.register(username, password):
             print("The username %s was successfully registered" %username)
             message = format("Server: The username %s was successfully registered\n" %username)
             self.packetIO.write_packet(
@@ -256,7 +259,7 @@ class Server:
         tokens = packet[5:packet_len].decode("utf-8").split(":", 1)
         username = tokens[0]
         password = tokens[1] 
-        if not client["logged_in"] and users.attempt_login(username, password):
+        if not client["logged_in"] and self.userDao.attempt_login(username, password):
             client["username"] = username
             client["logged_in"] = True
             login_packet = format("Server: %s logged in as %s\n" %(client_name, username))
