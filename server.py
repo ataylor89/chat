@@ -1,6 +1,6 @@
 from packet_io import PacketIO
-from rsa import parser
 from users import UserDao
+from rsa import parser
 import packet_types
 import socket
 import threading
