@@ -5,8 +5,8 @@ import packet_types
 import socket
 import threading
 import configparser
-from datetime import datetime
 from zoneinfo import ZoneInfo
+from datetime import datetime
 
 class Server:
     def __init__(self, config):
