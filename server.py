@@ -1,7 +1,6 @@
 from packet_io import PacketIO
 from users import UserDao
 import packet_types
-import users
 import socket
 import threading
 from datetime import datetime
