@@ -283,6 +283,9 @@ class Server:
             self.handle_profile(packet, client_id)
             print("%s logged in as %s" %(client_name, username))
         else:
+            client_socket = client["client_socket"]
+            encryption_key = client["public_key"]
+            use_encryption = client["encryption"]
             login_packet = format("Server: Unable to login as %s\n" %username)
             self.packetIO.write_packet(
                 client_socket, 
