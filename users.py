@@ -35,24 +35,31 @@ class UserDao:
     def __init__(self):
         self.users = {}
 
-    def load_user_db(self, path="users.pickle"):
+    def load_user_db(self, path='users.pickle'):
         if os.path.exists(path):
-            with open(path, "rb") as file:
+            with open(path, 'rb') as file:
                 self.users.clear()
                 self.users.update(pickle.load(file))
 
-    def save_user_db(self, path="users.pickle"):
-        with open(path, "wb") as file:
+    def save_user_db(self, path='users.pickle'):
+        with open(path, 'wb') as file:
             pickle.dump(self.users, file)
 
     def register(self, username, password):
         if username in self.users:
             return False
-        password_hash = sha256.sha256(password.encode('utf-8')).hexdigest
-        self.users[username] = {"password_hash": password_hash, "registration_dt": datetime.now()}
+        salt = os.urandom(16)
+        salted_password = salt + password.encode('utf-8')
+        password_hash = sha256.sha256(salted_password).hexdigest
+        self.users[username] = {'salt': salt, 'password_hash': password_hash, 'registration_dt': datetime.now()}
         self.save_user_db()
         return True
 
     def attempt_login(self, username, password):
-        password_hash = sha256.sha256(password.encode('utf-8')).hexdigest
-        return username in self.users and password_hash == self.users[username]["password_hash"]
+        if username not in self.users:
+            return False
+        user = self.users[username]
+        salt = user['salt']
+        salted_password = salt + password.encode('utf-8')
+        password_hash = sha256.sha256(salted_password).hexdigest
+        return password_hash == user['password_hash']
