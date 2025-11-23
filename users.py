@@ -26,6 +26,7 @@
 
 # I wanted to write this brief introduction before we proceed with the code
 
+import sha256
 import os
 import pickle
 from datetime import datetime
@@ -41,15 +42,17 @@ class UserDao:
                 self.users.update(pickle.load(file))
 
     def save_user_db(self, path="users.pickle"):
-        with open(path, "w") as file:
+        with open(path, "wb") as file:
             pickle.dump(self.users, file)
 
     def register(self, username, password):
         if username in self.users:
             return False
-        self.users[username] = {"password": password, "registration_dt": datetime.now()}
+        password_hash = sha256.sha256(password.encode('utf-8')).hexdigest
+        self.users[username] = {"password_hash": password_hash, "registration_dt": datetime.now()}
         self.save_user_db()
         return True
 
     def attempt_login(self, username, password):
-        return username in self.users and password == self.users[username]["password"]
+        password_hash = sha256.sha256(password.encode('utf-8')).hexdigest
+        return username in self.users and password_hash == self.users[username]["password_hash"]
