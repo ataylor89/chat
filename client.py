@@ -394,7 +394,8 @@ class Client:
 
 def main():
     config = configparser.ConfigParser()
-    config_file = f"{sys.path[0]}/config/client_settings.ini"
+    project_root = sys.path[0]
+    config_file = f"{project_root}/config/client_settings.ini"
     config.read(config_file)
     cli = Client(config)
     gui = GUI(config)

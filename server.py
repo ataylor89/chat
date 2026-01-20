@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from packet_io import PacketIO
 from users import UserDao
 from rsa import parser
@@ -7,11 +9,13 @@ import packet_types
 import socket
 import threading
 import configparser
+import sys
 
 class Server:
     def __init__(self, config):
         self.host = config["default"]["host"]
         self.port = int(config["default"]["port"])
+        self.project_root = config["default"]["project_root"]
         self.packetIO = PacketIO()
         self.packetIO.open_log(config["default"]["logfile"], config["default"]["logmode"])
         self.userDao = UserDao()
@@ -45,7 +49,7 @@ class Server:
     def readloop(self, client_id):
         client = self.clients[client_id]
         client_socket = client["client_socket"]
-        decryption_key = parser.parse_key("rsa/privatekey.txt")
+        decryption_key = parser.parse_key(f"{self.project_root}/rsa/privatekey.txt")
         done = False
         while not done:
             try:
@@ -139,7 +143,7 @@ class Server:
         username = client["username"] if client["username"] else client_name
         client_public_key_enc = packet[5:packet_len].decode("utf-8")
         client["public_key"] = parser.decode(client_public_key_enc)
-        server_public_key = parser.parse_key("rsa/publickey.txt")
+        server_public_key = parser.parse_key(f"{self.project_root}/rsa/publickey.txt")
         server_public_key_enc = parser.encode(server_public_key)
         encryption_key = client["public_key"]
         use_encryption = client["encryption"]
@@ -429,7 +433,10 @@ class Server:
 
 def main():
     config = configparser.ConfigParser()
-    config.read("config/server_settings.ini")
+    project_root = sys.path[0]
+    config_path = f"{project_root}/config/server_settings.ini"
+    config.read(config_path)
+    config["default"]["project_root"] = project_root
     server = Server(config)
     server.listen()
 
