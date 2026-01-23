@@ -1,14 +1,11 @@
 cmdlist = [
-    "/connect",
-    "/disconnect",
-    "/encryption",
-    "/join",
-    "/leave",
-    "/register",
-    "/login",
-    "/logout",
-    "/whoami",
-    "/date",
-    "/time",
-    "/exit"
+    '/connect',
+    '/disconnect',
+    '/register',
+    '/login',
+    '/logout',
+    '/whoami',
+    '/date',
+    '/time',
+    '/exit'
 ]

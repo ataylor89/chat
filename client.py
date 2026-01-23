@@ -14,39 +14,51 @@ import configparser
 import sys
 
 class Client:
+
     def __init__(self, config):
         self.config = config
-        self.packetIO = PacketIO()
-        self.packetIO.open_log(config["default"]["logfile"], config["default"]["logmode"])
-        self.host = config["default"]["host"]
-        self.port = int(config["default"]["port"])
+        self.project_root = sys.path[0]
+        self.packetIO = PacketIO(config)
+        self.packetIO.open_log()
+        self.host = config['default']['host']
+        self.port = int(config['default']['port'])
         self.sock = None
-        self.use_encryption = False
         self.connected = False
-        self.active = False
-        self.logged_in = False
-        self.client_name = None
+        self.encryption = False
         self.client_ip = None
         self.client_port = None
+        self.client_name = None
+        self.logged_in = False
         self.username = None
         self.keys = {
-            "client": {"public": None, "private": None},
-            "server": {"public": None, "private": None}
+            'client': {'public': None, 'private': None},
+            'server': {'public': None, 'private': None}
         }
+        self.parse_keys()
 
     def set_gui(self, gui):
         self.gui = gui
 
     def parse_keys(self):
-        self.keys["client"]["public"] = parser.parse_key(f"{sys.path[0]}/rsa/publickey.txt")
-        self.keys["client"]["private"] = parser.parse_key(f"{sys.path[0]}/rsa/privatekey.txt")
+        public_key_file = self.config['default']['public_key_file']
+
+        if not public_key_file.startswith('/'):
+            public_key_file = self.project_root + '/' + public_key_file
+
+        private_key_file = self.config['default']['private_key_file']
+
+        if not private_key_file.startswith('/'):
+            private_key_file = self.project_root + '/' + private_key_file
+
+        self.keys['client']['public'] = parser.parse_key(public_key_file)
+        self.keys['client']['private'] = parser.parse_key(private_key_file)
 
     def readloop(self):
         done = False
         while not done:
             try:
-                decryption_key = self.keys["client"]["private"]
-                packet = self.packetIO.read_packet(self.sock, key=decryption_key, encryption=self.use_encryption)
+                decryption_key = self.keys['client']['private']
+                packet = self.packetIO.read_packet(self.sock, decryption_key)
                 if packet:
                     self.process(packet)
             except socket.error as e:
@@ -55,22 +67,17 @@ class Client:
                 print(e)
         self.sock = None
         self.connected = False
-        self.use_encryption = False
+        self.encryption = False
+        self.logged_in = False
 
     def process(self, packet):
         packet_type = packet[4]
-        if packet_type == packet_types.CONNECT:
+        if packet_type == packet_types.EXCHANGE_PUBLIC_KEYS:
+            self.handle_exchange_public_keys(packet)
+        elif packet_type == packet_types.CONNECT:
             self.handle_connect(packet)
         elif packet_type == packet_types.DISCONNECT:
             self.handle_disconnect(packet)
-        elif packet_type == packet_types.ENCRYPTION_ON:
-            self.handle_encryption_on(packet)
-        elif packet_type == packet_types.ENCRYPTION_OFF:
-            self.handle_encryption_off(packet)
-        elif packet_type == packet_types.JOIN:
-            self.handle_join(packet)
-        elif packet_type == packet_types.LEAVE:
-            self.handle_leave(packet)
         elif packet_type == packet_types.REGISTER:
             self.handle_register(packet)
         elif packet_type == packet_types.LOGIN:
@@ -90,6 +97,14 @@ class Client:
         elif packet_type == packet_types.TIME:
             self.handle_time(packet)
 
+    def exchange_public_keys(self):
+        if not self.connected:
+            return
+        client_public_key = self.keys['client']['public']
+        client_public_key_encoded = parser.encode(client_public_key)
+        encryption_key = self.keys['server']['public'] if self.encryption else None
+        self.packetIO.write_packet(self.sock, packet_types.EXCHANGE_PUBLIC_KEYS, client_public_key_encoded, encryption_key)
+
     def connect(self, host, port):
         if self.connected:
             return
@@ -99,258 +114,157 @@ class Client:
             self.connected = True
             self.readloop_thread = threading.Thread(target=self.readloop)
             self.readloop_thread.start()
-            encryption_key = self.keys["server"]["public"]
-            self.packetIO.write_packet(self.sock,
-                packet_types.CONNECT,
-                None,
-                key=encryption_key,
-                encryption=self.use_encryption)
+            self.exchange_public_keys()
+            while not self.encryption:
+                time.sleep(0.005) # 5 milliseconds
+            encryption_key = self.keys['server']['public']
+            self.packetIO.write_packet(self.sock, packet_types.CONNECT, None, encryption_key)
         except Exception as e:
             print(e)
 
+    def notify_disconnect(self, callback):
+        if not self.connected:
+            return
+        encryption_key = self.keys['server']['public']
+        self.packetIO.write_packet(self.sock, packet_types.DISCONNECT, None, encryption_key, callback)
+
     def disconnect(self):
-        if not self.connected:
-            return
-        encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.sock,
-            packet_types.DISCONNECT,
-            None,
-            key=encryption_key,
-            encryption=self.use_encryption)
-
-    def encryption_on(self):
-        if not self.connected:
-            return
-        self.parse_keys()
-        client_public_key = self.keys["client"]["public"]
-        client_public_key_enc = parser.encode(client_public_key)
-        encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.sock,
-            packet_types.ENCRYPTION_ON,
-            client_public_key_enc,
-            key=encryption_key,
-            encryption=self.use_encryption)
-
-    def encryption_off(self):
-        if not self.connected:
-            return
-        encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.sock,
-            packet_types.ENCRYPTION_OFF,
-            None,
-            key=encryption_key,
-            encryption=self.use_encryption)
-
-    def join(self):
-        if not self.connected:
-            return
-        encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.sock,
-            packet_types.JOIN,
-            None,
-            key=encryption_key,
-            encryption=self.use_encryption)
-
-    def leave(self):
-        if not self.connected or not self.active:
-            return
-        encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.sock,
-            packet_types.LEAVE,
-            None,
-            key=encryption_key,
-            encryption=self.use_encryption)
+        self.gui.add_message('Disconnected from the server\n')
+        self.gui.clear_userlist()
+        if self.sock:
+            self.sock.close()
+            self.readloop_thread.join()
 
     def register(self, username, password):
-        if not self.connected:
+        if not self.encryption:
             return
-        message = username + ":" + password
-        encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.sock,
-            packet_types.REGISTER, 
-            message,
-            key=encryption_key,
-            encryption=self.use_encryption)
+        message = username + ':' + password
+        encryption_key = self.keys['server']['public']
+        self.packetIO.write_packet(self.sock, packet_types.REGISTER, message, encryption_key)
 
     def login(self, username, password):
-        if not self.connected:
+        if not self.encryption:
             return
-        message = username + ":" + password
-        encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.sock,
-            packet_types.LOGIN, 
-            message,
-            key=encryption_key,
-            encryption=self.use_encryption)
+        message = username + ':' + password
+        encryption_key = self.keys['server']['public']
+        self.packetIO.write_packet(self.sock, packet_types.LOGIN, message, encryption_key)
 
     def logout(self):
-        if not self.connected or not self.logged_in:
+        if not self.logged_in:
             return
-        encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.sock,
-            packet_types.LOGOUT,
-            None,
-            key=encryption_key,
-            encryption=self.use_encryption)
+        encryption_key = self.keys['server']['public']
+        self.packetIO.write_packet(self.sock, packet_types.LOGOUT, None, encryption_key)
 
     def send_message(self, message):
-        if not self.connected or not self.active:
+        if not self.encryption:
             return
-        encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.sock,
-            packet_types.MESSAGE, 
-            message,
-            key=encryption_key,
-            encryption=self.use_encryption)
+        encryption_key = self.keys['server']['public']
+        self.packetIO.write_packet(self.sock, packet_types.MESSAGE, message, encryption_key)
 
     def whoami(self):
-        if not self.connected:
+        if not self.encryption:
             return
-        encryption_key = self.keys["server"]["public"]
-        self.packetIO.write_packet(self.sock,
-            packet_types.WHOAMI,
-            None,
-            key=encryption_key,
-            encryption=self.use_encryption)
+        encryption_key = self.keys['server']['public']
+        self.packetIO.write_packet(self.sock, packet_types.WHOAMI, None, encryption_key)
 
     def get_date(self):
-        if not self.connected:
+        if not self.encryption:
             return
-        encryption_key = self.keys["server"]["public"]
+        encryption_key = self.keys['server']['public']
         tz_name = tzlocal.get_localzone_name()
-        self.packetIO.write_packet(self.sock,
-            packet_types.DATE,
-            tz_name,
-            key=encryption_key,
-            encryption=self.use_encryption)
+        self.packetIO.write_packet(self.sock, packet_types.DATE, tz_name, encryption_key)
 
     def get_time(self):
-        if not self.connected:
+        if not self.encryption:
             return
-        encryption_key = self.keys["server"]["public"]
+        encryption_key = self.keys['server']['public']
         tz_name = tzlocal.get_localzone_name()
-        self.packetIO.write_packet(self.sock,
-            packet_types.TIME,
-            tz_name,
-            key=encryption_key,
-            encryption=self.use_encryption)
+        self.packetIO.write_packet(self.sock, packet_types.TIME, tz_name, encryption_key)
 
     def exit(self):
         if self.sock:
-            encryption_key = self.keys["server"]["public"]
-            self.packetIO.write_packet(self.sock,
-                packet_types.DISCONNECT,
-                None,
-                key=encryption_key,
-                encryption=self.use_encryption)
             self.sock.close()
             self.readloop_thread.join()
         self.gui.app_is_closing = True
         self.gui.destroy()
 
+    def handle_exchange_public_keys(self, packet):
+        packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
+        server_public_key_encoded = packet[5:packet_len].decode('utf-8')
+        self.keys['server']['public'] = parser.decode(server_public_key_encoded)
+        self.encryption = True
+
     def handle_connect(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        message = packet[5:packet_len].decode("utf-8")
+        packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
+        message = packet[5:packet_len].decode('utf-8')
         self.gui.add_message(message)
 
     def handle_disconnect(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        message = packet[5:packet_len].decode("utf-8")
+        packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
+        message = packet[5:packet_len].decode('utf-8')
         self.gui.add_message(message)
-        self.gui.clear_userlist()
-        if self.sock:
-            self.sock.close()
-
-    def handle_encryption_on(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        packet_body = packet[5:packet_len].decode("utf-8")
-        index = packet_body.find(":")
-        index = packet_body.find(":", index+1)
-        message = packet_body[0:index]
-        server_public_key = packet_body[index+1:]
-        self.gui.add_message(message)
-        self.keys["server"]["public"] = parser.decode(server_public_key)
-        self.use_encryption = True
-
-    def handle_encryption_off(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        message = packet[5:packet_len].decode("utf-8")
-        self.gui.add_message(message)
-        self.use_encryption = False
-
-    def handle_join(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        message = packet[5:packet_len].decode("utf-8")
-        self.gui.add_message(message)
-
-    def handle_leave(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        message = packet[5:packet_len].decode("utf-8")
-        self.gui.add_message(message)
-        self.gui.clear_userlist()
 
     def handle_register(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        message = packet[5:packet_len].decode("utf-8")
+        packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
+        message = packet[5:packet_len].decode('utf-8')
         self.gui.add_message(message)
 
     def handle_login(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        message = packet[5:packet_len].decode("utf-8")
+        packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
+        message = packet[5:packet_len].decode('utf-8')
         self.gui.add_message(message)
 
     def handle_logout(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        message = packet[5:packet_len].decode("utf-8")
+        packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
+        message = packet[5:packet_len].decode('utf-8')
         self.gui.add_message(message)
 
     def handle_profile(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        body = packet[5:packet_len].decode("utf-8")
-        tokens = body.split(":")
-        self.active = tokens[0][7:] == "True"
-        self.logged_in = tokens[1][10:] == "True"
-        self.client_name = tokens[2][12:]
-        self.client_ip = tokens[3][10:]
-        self.client_port = int(tokens[4][12:])
-        self.username = tokens[5][9:] if tokens[5][9:] != "None" else None
+        packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
+        body = packet[5:packet_len].decode('utf-8')
+        tokens = body.split(':')
+        self.client_name = tokens[0][12:]
+        self.client_ip = tokens[1][10:]
+        self.client_port = int(tokens[2][12:])
+        self.logged_in = tokens[3][10:] == 'True'
+        self.username = tokens[4][9:] if tokens[4][9:] != 'None' else None
 
     def handle_userlist(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        packet_body = packet[5:packet_len].decode("utf-8")
-        userlist = packet_body.split(":")
+        packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
+        packet_body = packet[5:packet_len].decode('utf-8')
+        userlist = packet_body.split(':')
         self.gui.clear_userlist()
         for username in userlist:
             self.gui.add_user(username)
 
     def handle_message(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        message = packet[5:packet_len].decode("utf-8")
+        packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
+        message = packet[5:packet_len].decode('utf-8')
         self.gui.add_message(message)
 
     def handle_whoami(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        message = packet[5:packet_len].decode("utf-8")
+        packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
+        message = packet[5:packet_len].decode('utf-8')
         self.gui.add_message(message)
 
     def handle_date(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        message = packet[5:packet_len].decode("utf-8")
+        packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
+        message = packet[5:packet_len].decode('utf-8')
         self.gui.add_message(message)
 
     def handle_time(self, packet):
-        packet_len = int.from_bytes(packet[0:4], byteorder="big", signed=False)
-        message = packet[5:packet_len].decode("utf-8")
+        packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
+        message = packet[5:packet_len].decode('utf-8')
         self.gui.add_message(message)
 
     def is_command(self, message):
-        tokens = message.strip().split(" ")
-        if tokens[0].startswith("/") and tokens[0] in cmdlist:
+        tokens = message.strip().split(' ')
+        if tokens[0].startswith('/') and tokens[0] in cmdlist:
             return True
 
     def process_command(self, message):
         cmdname = message.strip().split()[0]
-        if cmdname == "/connect":
+        if cmdname == '/connect':
             tokens = message.strip().split()
             if len(tokens) == 3:
                 host = tokens[1]
@@ -358,44 +272,36 @@ class Client:
                 self.connect(host, port)
             else:
                 self.connect(self.host, self.port)
-        elif cmdname == "/disconnect":
-            self.disconnect()
-        elif cmdname == "/encryption":
-            tokens = message.strip().split()
-            if len(tokens) == 2:
-                if tokens[1] == "on":
-                    self.encryption_on()
-                elif tokens[1] == "off":
-                    self.encryption_off()
-        elif cmdname == "/join":
-            self.join()
-        elif cmdname == "/leave":
-            self.leave()
-        elif cmdname == "/register":
+        elif cmdname == '/disconnect':
+            self.notify_disconnect(self.disconnect)
+        elif cmdname == '/register':
             tokens = message.strip().split()
             username = tokens[1]
             password = tokens[2]
             self.register(username, password)
-        elif cmdname == "/login":
+        elif cmdname == '/login':
             tokens = message.strip().split()
             username = tokens[1]
             password = tokens[2]
             self.login(username, password)
-        elif cmdname == "/logout":
+        elif cmdname == '/logout':
             self.logout()
-        elif cmdname == "/whoami":
+        elif cmdname == '/whoami':
             self.whoami()
-        elif cmdname == "/date":
+        elif cmdname == '/date':
             self.get_date()
-        elif cmdname == "/time":
+        elif cmdname == '/time':
             self.get_time()
-        elif cmdname == "/exit":
-            self.exit()
+        elif cmdname == '/exit':
+            if self.connected:
+                self.notify_disconnect(self.exit)
+            else:
+                self.exit()
 
 def main():
     config = configparser.ConfigParser()
     project_root = sys.path[0]
-    config_file = f"{project_root}/config/client_settings.ini"
+    config_file = f'{project_root}/config/client_settings.ini'
     config.read(config_file)
     cli = Client(config)
     gui = GUI(config)
@@ -403,5 +309,5 @@ def main():
     cli.set_gui(gui)
     gui.mainloop()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

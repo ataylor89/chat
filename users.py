@@ -31,6 +31,23 @@ import os
 import pickle
 from datetime import datetime
 
+class User:
+    def __init__(self, username, salt, password_hash):
+        self.username = username
+        self.salt = salt
+        self.password_hash = password_hash
+        self.registration_dt = datetime.now()
+        self.logged_in = False
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['logged_in']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.logged_in = False
+
 class UserDao:
     def __init__(self):
         self.users = {}
@@ -51,15 +68,20 @@ class UserDao:
         salt = os.urandom(16)
         salted_password = salt + password.encode('utf-8')
         password_hash = sha256.sha256(salted_password).hexdigest
-        self.users[username] = {'salt': salt, 'password_hash': password_hash, 'registration_dt': datetime.now()}
+        self.users[username] = User(username, salt, password_hash)
         self.save_user_db()
         return True
 
     def attempt_login(self, username, password):
-        if username not in self.users:
+        if username not in self.users or self.users[username].logged_in:
             return False
         user = self.users[username]
-        salt = user['salt']
-        salted_password = salt + password.encode('utf-8')
+        salted_password = user.salt + password.encode('utf-8')
         password_hash = sha256.sha256(salted_password).hexdigest
-        return password_hash == user['password_hash']
+        if password_hash == user.password_hash:
+            user.logged_in = True
+            return True
+
+    def logout(self, username):
+        if username in self.users:
+            self.users[username].logged_in = False
