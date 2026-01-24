@@ -69,7 +69,8 @@ class Server:
         while not done:
             try:
                 decryption_key = self.keys['private']
-                packet = self.packetIO.read_packet(client_socket, key=decryption_key, use_encryption=client['encryption'])
+                encryption = client['encryption']
+                packet = self.packetIO.read_packet(client_socket, key=decryption_key, use_encryption=encryption)
                 if packet:
                     self.process(packet, client_id)
             except socket.error as e:
