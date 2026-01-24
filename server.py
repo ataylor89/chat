@@ -163,6 +163,8 @@ class Server:
                 self.packetIO.write_packet(cli_socket, packet_types.USERLIST, userlist_packet, key=encryption_key, use_encryption=encryption)
             except socket.error as e:
                 print(e)
+        if client['logged_in']:
+            self.userDao.logout(client['username'])
         client['client_socket'].close()
         print('%s has disconnected from the server' %display_name)
 
