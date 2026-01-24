@@ -68,8 +68,8 @@ class Server:
         done = False
         while not done:
             try:
-                decryption_key = self.keys['private'] if client['encryption'] else None
-                packet = self.packetIO.read_packet(client_socket, decryption_key)
+                decryption_key = self.keys['private']
+                packet = self.packetIO.read_packet(client_socket, key=decryption_key, use_encryption=client['encryption'])
                 if packet:
                     self.process(packet, client_id)
             except socket.error as e:
@@ -121,8 +121,10 @@ class Server:
         client_public_key_encoded = packet[5:packet_len].decode('utf-8')
         client['public_key'] = parser.decode(client_public_key_encoded)
         client['encryption'] = True
-        server_public_key_encoded = parser.encode(self.keys['public'])
-        self.packetIO.write_packet(client_socket, packet_types.EXCHANGE_PUBLIC_KEYS, server_public_key_encoded, client['public_key'])
+        packet_body = parser.encode(self.keys['public'])
+        encryption_key = client['public_key']
+        encryption = client['encryption']
+        self.packetIO.write_packet(client_socket, packet_types.EXCHANGE_PUBLIC_KEYS, packet_body, key=encryption_key, use_encryption=encryption)
         print('Exchanged public keys with user %s' %display_name)
 
     def handle_connect(self, packet, client_id):
@@ -134,9 +136,10 @@ class Server:
             cli = self.clients[cli_id]
             cli_socket = cli['client_socket']
             encryption_key = cli['public_key']
+            encryption = cli['encryption']
             try:
-                self.packetIO.write_packet(cli_socket, packet_types.CONNECT, connect_packet, encryption_key)
-                self.packetIO.write_packet(cli_socket, packet_types.USERLIST, userlist_packet, encryption_key)
+                self.packetIO.write_packet(cli_socket, packet_types.CONNECT, connect_packet, key=encryption_key, use_encryption=encryption)
+                self.packetIO.write_packet(cli_socket, packet_types.USERLIST, userlist_packet, key=encryption_key, use_encryption=encryption)
             except socket.error as e:
                 print(e)
         print('%s has connected to the server' %client_name)
@@ -154,9 +157,10 @@ class Server:
             cli = self.clients[cli_id]
             cli_socket = cli['client_socket']
             encryption_key = cli['public_key']
+            encryption = cli['encryption']
             try:
-                self.packetIO.write_packet(cli_socket, packet_types.DISCONNECT, disconnect_packet, encryption_key)
-                self.packetIO.write_packet(cli_socket, packet_types.USERLIST, userlist_packet, encryption_key)
+                self.packetIO.write_packet(cli_socket, packet_types.DISCONNECT, disconnect_packet, key=encryption_key, use_encryption=encryption)
+                self.packetIO.write_packet(cli_socket, packet_types.USERLIST, userlist_packet, key=encryption_key, use_encryption=encryption)
             except socket.error as e:
                 print(e)
         client['client_socket'].close()
@@ -167,16 +171,17 @@ class Server:
         client = self.clients[client_id]
         client_socket = client['client_socket']
         encryption_key = client['public_key']
+        encryption = client['encryption']
         tokens = packet[5:packet_len].decode('utf-8').split(':', 1)
         username = tokens[0]
         password = tokens[1]
         if self.userDao.register(username, password):
             message = format('Server: The username %s was successfully registered\n' %username)
-            self.packetIO.write_packet(client_socket, packet_types.REGISTER, message, encryption_key)
+            self.packetIO.write_packet(client_socket, packet_types.REGISTER, message, key=encryption_key, use_encryption=encryption)
             print('The username %s was successfully registered' %username)
         else:
             message = format('Server: The username %s is already taken\n' %username)
-            self.packetIO.write_packet(client_socket, packet_types.REGISTER, message, encryption_key)
+            self.packetIO.write_packet(client_socket, packet_types.REGISTER, message, key=encryption_key, use_encryption=encryption)
             print('Unable to register username %s because it is already taken' %username)
 
     def handle_login(self, packet, client_id):
@@ -195,16 +200,17 @@ class Server:
                 cli = self.clients[cli_id]
                 cli_socket = cli['client_socket']
                 encryption_key = cli['public_key']
-                use_encryption = cli['encryption']
-                self.packetIO.write_packet(cli_socket, packet_types.LOGIN, login_packet, encryption_key)
-                self.packetIO.write_packet(cli_socket, packet_types.USERLIST, userlist_packet, encryption_key)
+                encryption = cli['encryption']
+                self.packetIO.write_packet(cli_socket, packet_types.LOGIN, login_packet, key=encryption_key, use_encryption=encryption)
+                self.packetIO.write_packet(cli_socket, packet_types.USERLIST, userlist_packet, key=encryption_key, use_encryption=encryption)
             self.handle_profile(packet, client_id)
             print('%s logged in as %s' %(client_name, username))
         else:
             client_socket = client['client_socket']
             encryption_key = client['public_key']
+            encryption = client['encryption']
             login_packet = format('Server: Unable to login as %s\n' %username)
-            self.packetIO.write_packet(client_socket, packet_types.LOGIN, login_packet, encryption_key)
+            self.packetIO.write_packet(client_socket, packet_types.LOGIN, login_packet, key=encryption_key, use_encryption=encryption)
             print('%s was unable to login' %client_name)
 
     def handle_logout(self, packet, client_id):
@@ -223,9 +229,10 @@ class Server:
                 cli = self.clients[cli_id]
                 cli_socket = cli['client_socket']
                 encryption_key = cli['public_key']
+                encryption = cli['encryption']
                 try:
-                    self.packetIO.write_packet(cli_socket, packet_types.LOGOUT, logout_packet, encryption_key)
-                    self.packetIO.write_packet(cli_socket, packet_types.USERLIST, userlist_packet, encryption_key)
+                    self.packetIO.write_packet(cli_socket, packet_types.LOGOUT, logout_packet, key=encryption_key, use_encryption=encryption)
+                    self.packetIO.write_packet(cli_socket, packet_types.USERLIST, userlist_packet, key=encryption_key, use_encryption=encryption)
                 except socket.error as e:
                     print(e)
             self.handle_profile(packet, client_id)
@@ -243,7 +250,8 @@ class Server:
         template = 'client_name=%s:client_ip=%s:client_port=%d:logged_in=%s:username=%s'
         packet_body = format(template %(client_name, client_ip, client_port, logged_in, username))
         encryption_key = client['public_key']
-        self.packetIO.write_packet(client_socket, packet_types.PROFILE, packet_body, encryption_key)
+        encryption = client['encryption']
+        self.packetIO.write_packet(client_socket, packet_types.PROFILE, packet_body, key=encryption_key, use_encryption=encryption)
 
     def handle_message(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
@@ -254,8 +262,9 @@ class Server:
             cli = self.clients[cli_id]
             cli_socket = cli['client_socket']
             encryption_key = cli['public_key']
+            encryption = cli['encryption']
             try:
-                self.packetIO.write_packet(cli_socket, packet_types.MESSAGE, packet_body, encryption_key)
+                self.packetIO.write_packet(cli_socket, packet_types.MESSAGE, packet_body, key=encryption_key, use_encryption=encryption)
             except socket.error as e:
                 print(e)
         print(packet_body, end='')
@@ -269,36 +278,38 @@ class Server:
         client_port = client_address[1]
         username = client['username'] if client['username'] else 'None'
         encryption_key = client['public_key']
+        encryption = client['encryption']
         template = 'Server: whoami results\n'
         template += 'client_name=%s\n'
         template += 'client_ip=%s\n'
         template += 'client_port=%d\n'
         template += 'username=%s\n'
         packet_body = format(template %(client_name, client_ip, client_port, username))
-        self.packetIO.write_packet(client_socket, packet_types.WHOAMI, packet_body, encryption_key)
+        self.packetIO.write_packet(client_socket, packet_types.WHOAMI, packet_body, key=encryption_key, use_encryption=encryption)
 
     def handle_date(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
         client = self.clients[client_id]
         client_socket = client['client_socket']
         encryption_key = client['public_key']
+        encryption = client['encryption']
         client_timezone_name = packet[5:packet_len].decode('utf-8')
         client_timezone = ZoneInfo(client_timezone_name)
         now = datetime.now(client_timezone)
         message = format('Server: The date is %s\n' %now.strftime('%A, %B %-d, %Y'))
-        self.packetIO.write_packet(client_socket, packet_types.DATE, message, encryption_key)
+        self.packetIO.write_packet(client_socket, packet_types.DATE, message, key=encryption_key, use_encryption=encryption)
 
     def handle_time(self, packet, client_id):
         packet_len = int.from_bytes(packet[0:4], byteorder='big', signed=False)
         client = self.clients[client_id]
         client_socket = client['client_socket']
         encryption_key = client['public_key']
-        use_encryption = client['encryption']
+        encryption = client['encryption']
         client_timezone_name = packet[5:packet_len].decode('utf-8')
         client_timezone = ZoneInfo(client_timezone_name)
         now = datetime.now(client_timezone)
         message = format('Server: The time is %s\n' %now.strftime('%-I:%M %p %Z'))
-        self.packetIO.write_packet(client_socket, packet_types.TIME, message, encryption_key)
+        self.packetIO.write_packet(client_socket, packet_types.TIME, message, key=encryption_key, use_encryption=encryption)
 
 if __name__ == '__main__':
     config = configparser.ConfigParser()

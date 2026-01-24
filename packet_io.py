@@ -19,10 +19,10 @@ class PacketIO:
             self.logger.close()
         self.logger = None
 
-    def read_packet(self, s, key=None):
+    def read_packet(self, s, key=None, use_encryption=True):
         now = datetime.now().astimezone()
         timestamp = now.strftime('%m/%d/%Y %-I:%M.%f %p %Z')
-        if key:
+        if use_encryption:
             header = s.recv(5)
             if len(header) < 5:
                 return None
@@ -68,10 +68,10 @@ class PacketIO:
             if len(packet) == packet_len:
                 return packet
 
-    def write_packet(self, s, packet_type, message, key=None, callback=None):
+    def write_packet(self, s, packet_type, message, key=None, use_encryption=True, callback=None):
         now = datetime.now().astimezone()
         timestamp = now.strftime('%m/%d/%Y %-I:%M.%f %p %Z')
-        if key:
+        if use_encryption:
             packet_len = 5
             if message:
                 body = encrypt.encrypt(message, key)
