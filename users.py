@@ -31,17 +31,17 @@ import os
 import pickle
 from user import User
 
-class UserDao:
+class UserDatabase:
     def __init__(self):
         self.users = {}
 
-    def load_user_db(self, path='users.pickle'):
+    def load(self, path='users.pickle'):
         if os.path.exists(path):
             with open(path, 'rb') as file:
                 self.users.clear()
                 self.users.update(pickle.load(file))
 
-    def save_user_db(self, path='users.pickle'):
+    def save(self, path='users.pickle'):
         with open(path, 'wb') as file:
             pickle.dump(self.users, file)
 
@@ -52,7 +52,7 @@ class UserDao:
         salted_password = salt + password.encode('utf-8')
         password_hash = sha256.sha256(salted_password).hexdigest
         self.users[username] = User(username, salt, password_hash)
-        self.save_user_db()
+        self.save()
         return True
 
     def attempt_login(self, username, password):

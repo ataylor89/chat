@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from packet_io import PacketIO
-from users import UserDao
+from users import UserDatabase
 from rsa import parser
 from zoneinfo import ZoneInfo
 from datetime import datetime
@@ -19,8 +19,8 @@ class Server:
         self.project_root = sys.path[0]
         self.packetIO = PacketIO(config)
         self.packetIO.open_log()
-        self.userDao = UserDao()
-        self.userDao.load_user_db()
+        self.users = UserDatabase()
+        self.users.load()
         self.clients = {}
         self.keys = {'public': None, 'private': None}
         self.parse_keys()
@@ -164,7 +164,7 @@ class Server:
             except socket.error as e:
                 print(e)
         if client['logged_in']:
-            self.userDao.logout(client['username'])
+            self.users.logout(client['username'])
         client['client_socket'].close()
         print('%s has disconnected from the server' %display_name)
 
@@ -177,7 +177,7 @@ class Server:
         tokens = packet[5:packet_len].decode('utf-8').split(':', 1)
         username = tokens[0]
         password = tokens[1]
-        if self.userDao.register(username, password):
+        if self.users.register(username, password):
             message = format('Server: The username %s was successfully registered\n' %username)
             self.packetIO.write_packet(client_socket, packet_types.REGISTER, message, key=encryption_key, use_encryption=encryption)
             print('The username %s was successfully registered' %username)
@@ -193,7 +193,7 @@ class Server:
         tokens = packet[5:packet_len].decode('utf-8').split(':', 1)
         username = tokens[0]
         password = tokens[1] 
-        if not client['logged_in'] and self.userDao.attempt_login(username, password):
+        if not client['logged_in'] and self.users.attempt_login(username, password):
             client['username'] = username
             client['logged_in'] = True
             login_packet = format('Server: %s logged in as %s\n' %(client_name, username))
@@ -222,7 +222,7 @@ class Server:
         client_name = client['client_name']
         username = client['username']
         if client['logged_in']:
-            self.userDao.logout(username)
+            self.users.logout(username)
             client['username'] = None
             client['logged_in'] = False
             logout_packet = format('Server: %s logged out\n' %username)
