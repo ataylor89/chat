@@ -19,7 +19,7 @@ class PacketIO:
             self.logger.close()
         self.logger = None
 
-    def read_packet(self, s, key=None, use_encryption=True):
+    def read_packet(self, s, key=None, use_encryption=False):
         now = datetime.now().astimezone()
         timestamp = now.strftime('%m/%d/%Y %-I:%M.%f %p %Z')
         if use_encryption:
@@ -68,7 +68,7 @@ class PacketIO:
             if len(packet) == packet_len:
                 return packet
 
-    def write_packet(self, s, packet_type, message, key=None, use_encryption=True, callback=None):
+    def write_packet(self, s, packet_type, message, key=None, use_encryption=False, callback=None):
         now = datetime.now().astimezone()
         timestamp = now.strftime('%m/%d/%Y %-I:%M.%f %p %Z')
         if use_encryption:
