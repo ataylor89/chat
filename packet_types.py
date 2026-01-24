@@ -11,7 +11,7 @@ WHOAMI = 10
 DATE = 11
 TIME = 12
 
-map = {
+lookup_table = {
     1: 'EXCHANGE_PUBLIC_KEYS',
     2: 'CONNECT',
     3: 'DISCONNECT',

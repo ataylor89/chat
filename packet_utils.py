@@ -27,7 +27,7 @@ def hexdump(packet):
 def str(packet):
     packet_len = len(packet)
     packet_type = packet[4]
-    packet_type = packet_types.map[packet_type] if packet_type in packet_types.map else 'UNKNOWN'
+    packet_type = packet_types.lookup_table.get(packet_type, 'UNKNOWN')
     packet_body = packet[5:packet_len].decode('utf-8')
     contents = format('Packet length: %d bytes\n' %packet_len)
     contents += format('Packet type: %s\n' %packet_type)
