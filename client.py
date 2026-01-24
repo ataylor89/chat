@@ -58,7 +58,7 @@ class Client:
         while not done:
             try:
                 decryption_key = self.keys['client']['private']
-                packet = self.packetIO.read_packet(self.sock, decryption_key)
+                packet = self.packetIO.read_packet(self.sock, key=decryption_key, use_encryption=self.encryption)
                 if packet:
                     self.process(packet)
             except socket.error as e:

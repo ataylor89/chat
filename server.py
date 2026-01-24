@@ -120,11 +120,11 @@ class Server:
         display_name = client['username'] if client['username'] else client['client_name']
         client_public_key_encoded = packet[5:packet_len].decode('utf-8')
         client['public_key'] = parser.decode(client_public_key_encoded)
-        client['encryption'] = True
         packet_body = parser.encode(self.keys['public'])
         encryption_key = client['public_key']
         encryption = client['encryption']
         self.packetIO.write_packet(client_socket, packet_types.EXCHANGE_PUBLIC_KEYS, packet_body, key=encryption_key, use_encryption=encryption)
+        client['encryption'] = True
         print('Exchanged public keys with user %s' %display_name)
 
     def handle_connect(self, packet, client_id):
