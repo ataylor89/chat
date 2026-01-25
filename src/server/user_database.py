@@ -1,7 +1,7 @@
-import sha256
+from server.user import User
+from shared import sha256
 import os
 import pickle
-from user import User
 
 class UserDatabase:
     def __init__(self):

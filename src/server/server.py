@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
 
-from packet_io import PacketIO
-from client_registry import ClientData, ClientRegistry
-from users import UserDatabase
-from rsa import parser
+from server import base_dir
+from server.client import Client
+from server.client_registry import ClientRegistry
+from server.user_database import UserDatabase
+from shared import packet_types
+from shared.packet_io import PacketIO
+from shared.rsa import parser
 from zoneinfo import ZoneInfo
 from datetime import datetime
-import packet_types
 import socket
 import threading
-import configparser
-import sys
 
 class Server:
     def __init__(self, config):
         self.config = config
         self.host = config['default']['host']
         self.port = int(config['default']['port'])
-        self.project_root = sys.path[0]
         self.packetIO = PacketIO(config)
         self.packetIO.open_log()
         self.users = UserDatabase()
@@ -27,18 +26,10 @@ class Server:
         self.parse_keys()
 
     def parse_keys(self):
-        public_key_file = self.config['default']['public_key_file']
-
-        if not public_key_file.startswith('/'):
-            public_key_file = self.project_root + '/' + public_key_file
-
-        private_key_file = self.config['default']['private_key_file']
-
-        if not private_key_file.startswith('/'):
-            private_key_file = self.project_root + '/' + private_key_file
-
-        self.keys['public'] = parser.parse_key(public_key_file)
-        self.keys['private'] = parser.parse_key(private_key_file)
+        public_key_path = base_dir + '/' + self.config['default']['public_key_path']
+        private_key_path = base_dir + '/' + self.config['default']['private_key_path']
+        self.keys['public'] = parser.parse_key(public_key_path)
+        self.keys['private'] = parser.parse_key(private_key_path)
 
     def listen(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -47,7 +38,7 @@ class Server:
         client_id = 1
         while True:
             client_socket, client_address = self.server_socket.accept()
-            client = ClientData(client_id, client_socket, client_address)
+            client = Client(client_id, client_socket, client_address)
             self.clients.add_client(client)
             thread = threading.Thread(target=self.readloop, args=(client_id,))
             thread.start()
@@ -304,11 +295,3 @@ class Server:
         now = datetime.now(client_timezone)
         message = format('Server: The time is %s\n' %now.strftime('%-I:%M %p %Z'))
         self.packetIO.write_packet(client_socket, packet_types.TIME, message, key=encryption_key, use_encryption=encryption)
-
-if __name__ == '__main__':
-    config = configparser.ConfigParser()
-    project_root = sys.path[0]
-    config_path = f'{project_root}/config/server_settings.ini'
-    config.read(config_path)
-    server = Server(config)
-    server.listen()

@@ -1,4 +1,4 @@
-import packet_types
+from shared import packet_types
 
 def hexdump(packet):
     packet_len = len(packet)

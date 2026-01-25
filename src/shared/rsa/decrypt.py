@@ -1,5 +1,5 @@
-from rsa import parser
-from rsa import util
+from shared.rsa import parser
+from shared.rsa import util
 import sys
 
 def decrypt(ciphertext, key):

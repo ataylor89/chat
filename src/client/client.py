@@ -1,23 +1,20 @@
 #!/usr/bin/env python3
 
-from gui import GUI
-from packet_io import PacketIO
-import packet_types
-from cmdlist import cmdlist
-from rsa import parser
+from client import base_dir
+from client.cmdlist import cmdlist
+from shared import packet_types
+from shared.packet_io import PacketIO
+from shared.rsa import parser
+from datetime import datetime
 import socket
 import threading
 import time
-from datetime import datetime
 import tzlocal
-import configparser
-import sys
 
 class Client:
 
     def __init__(self, config):
         self.config = config
-        self.project_root = sys.path[0]
         self.packetIO = PacketIO(config)
         self.packetIO.open_log()
         self.host = config['default']['host']
@@ -40,18 +37,10 @@ class Client:
         self.gui = gui
 
     def parse_keys(self):
-        public_key_file = self.config['default']['public_key_file']
-
-        if not public_key_file.startswith('/'):
-            public_key_file = self.project_root + '/' + public_key_file
-
-        private_key_file = self.config['default']['private_key_file']
-
-        if not private_key_file.startswith('/'):
-            private_key_file = self.project_root + '/' + private_key_file
-
-        self.keys['client']['public'] = parser.parse_key(public_key_file)
-        self.keys['client']['private'] = parser.parse_key(private_key_file)
+        public_key_path = base_dir + '/' + self.config['default']['public_key_path']
+        private_key_path = base_dir + '/' + self.config['default']['private_key_path']
+        self.keys['client']['public'] = parser.parse_key(public_key_path)
+        self.keys['client']['private'] = parser.parse_key(private_key_path)
 
     def readloop(self):
         done = False
@@ -297,17 +286,3 @@ class Client:
                 self.notify_disconnect(self.exit)
             else:
                 self.exit()
-
-def main():
-    config = configparser.ConfigParser()
-    project_root = sys.path[0]
-    config_file = f'{project_root}/config/client_settings.ini'
-    config.read(config_file)
-    cli = Client(config)
-    gui = GUI(config)
-    gui.set_client(cli)
-    cli.set_gui(gui)
-    gui.mainloop()
-
-if __name__ == '__main__':
-    main()

@@ -1,5 +1,5 @@
-import packet_utils
-from rsa import encrypt, decrypt, parser, util
+from shared import packet_utils
+from shared.rsa import encrypt, decrypt, parser, util
 from datetime import datetime
 
 class PacketIO:
