@@ -1,3 +1,3 @@
-from importlib.resources import files
+import sys
 
-base_dir = str(files('server'))
+base_dir = sys.path[0]
