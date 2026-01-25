@@ -1,6 +1,7 @@
 from server import base_dir
 from server.client import Client
 from server.client_registry import ClientRegistry
+from server.key_manager import KeyManager
 from server.user_database import UserDatabase
 from shared import packet_types
 from shared.packet_io import PacketIO
@@ -20,14 +21,8 @@ class Server:
         self.users = UserDatabase()
         self.users.load()
         self.clients = ClientRegistry()
-        self.keys = {'public': None, 'private': None}
-        self.parse_keys()
-
-    def parse_keys(self):
-        public_key_path = base_dir + '/' + self.config['default']['public_key_path']
-        private_key_path = base_dir + '/' + self.config['default']['private_key_path']
-        self.keys['public'] = parser.parse_key(public_key_path)
-        self.keys['private'] = parser.parse_key(private_key_path)
+        self.keys = KeyManager(config)
+        self.keys.load()
 
     def listen(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

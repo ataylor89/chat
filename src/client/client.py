@@ -1,5 +1,6 @@
 from client import base_dir
 from client.cmdlist import cmdlist
+from client.key_manager import KeyManager
 from shared import packet_types
 from shared.packet_io import PacketIO
 from shared.rsa import parser
@@ -25,20 +26,11 @@ class Client:
         self.client_name = None
         self.logged_in = False
         self.username = None
-        self.keys = {
-            'client': {'public': None, 'private': None},
-            'server': {'public': None, 'private': None}
-        }
-        self.parse_keys()
+        self.keys = KeyManager(config)
+        self.keys.load()
 
     def set_gui(self, gui):
         self.gui = gui
-
-    def parse_keys(self):
-        public_key_path = base_dir + '/' + self.config['default']['public_key_path']
-        private_key_path = base_dir + '/' + self.config['default']['private_key_path']
-        self.keys['client']['public'] = parser.parse_key(public_key_path)
-        self.keys['client']['private'] = parser.parse_key(private_key_path)
 
     def readloop(self):
         done = False
