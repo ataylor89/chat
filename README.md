@@ -18,7 +18,7 @@ The chat server can be run with the following commands:
 The chat client can be run with the following commands:
 
     % cd ~/Github/chat
-    % python -m src.chat.main
+    % python -m src.client.main
 
 Then I open the window of the chat client, and type the command "/connect".
 
