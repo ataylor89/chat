@@ -1,5 +1,33 @@
 # readme
 
+## Requirements
+
+At the time of writing, this project has only one external dependency.
+
+The external dependency is a library called tzlocal. It can be used to get a system's IANA time zone name.
+
+I use this library to get the client's local date and time. (Both date and time depend on timezone.)
+
+In particular, I use tzlocal to implement the "/date" and "/time" commands.
+
+The tzlocal dependency can be installed with the following command:
+
+    pip install tzlocal
+
+Alternatively, it can be installed using the requirements.txt file as an input.
+
+    pip install -r requirements.txt
+
+This dependency has to be installed in order for the program to work.
+
+If you don't want to install the dependency, you can modify the implementation of the "/date" and "/time" commands, so that they don't rely on tzlocal.
+
+It's possible to modify the implementation of the "/date" and "/time" commands, so that they rely on the standard library and only the standard library.
+
+The reason I use tzlocal is that it made the implementation simpler. I tried doing it without tzlocal, but found it a little difficult.
+
+So I use tzlocal because it makes time zones easier to work with.
+
 ## Usage
 
 The chat server can be run with the following commands:
