@@ -5,7 +5,7 @@ from configparser import ConfigParser
 
 def main():
     config = ConfigParser()
-    config_path = base_dir + '/config/client_settings.ini'
+    config_path = base_dir + '/client/config/client_settings.ini'
     config.read(config_path)
     cli = Client(config)
     gui = GUI(config)
