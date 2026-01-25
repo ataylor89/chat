@@ -1,6 +1,4 @@
-from shared.rsa import parser
-from shared.rsa import util
-import sys
+from shared.rsa import parser, util
 
 def decrypt(ciphertext, key):
     message = ""
@@ -18,17 +16,3 @@ def decrypt(ciphertext, key):
         i += 1
         start += size
     return message
-
-def main():
-    if len(sys.argv) != 2:
-        print("Usage: python decrypt.py <cipherfile>")
-        sys.exit(0)
-    cipherfile = open(sys.argv[1], "rb")
-    ciphertext = cipherfile.read()
-    ciphertext = ciphertext.decode("utf-8")
-    key = parser.parse_key("privatekey.txt")
-    msg = decrypt(ciphertext, key)
-    print(msg, end='')
-
-if __name__ == "__main__":
-    main()

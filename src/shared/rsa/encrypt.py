@@ -1,6 +1,4 @@
-from shared.rsa import parser
-from shared.rsa import util
-import sys
+from shared.rsa import parser, util
 
 def encrypt(msg, key):
     ciphertext = ""
@@ -13,16 +11,3 @@ def encrypt(msg, key):
         encoding = util.encode(cipher, size)
         ciphertext += encoding
     return ciphertext
-
-def main():
-    if len(sys.argv) != 2: 
-        print("Usage: python encrypt.py <messagefile>")
-        sys.exit(0)
-    msgfile = open(sys.argv[1], "r")
-    msg = msgfile.read()
-    key = parser.parse_key("publickey.txt")
-    ciphertext = encrypt(msg, key)
-    print(ciphertext, end='')
-
-if __name__ == "__main__":
-    main()
