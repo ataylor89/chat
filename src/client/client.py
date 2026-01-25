@@ -35,8 +35,8 @@ class Client:
         self.gui = gui
 
     def parse_keys(self):
-        public_key_path = base_dir + '/client/' + self.config['default']['public_key_path']
-        private_key_path = base_dir + '/client/' + self.config['default']['private_key_path']
+        public_key_path = base_dir + '/' + self.config['default']['public_key_path']
+        private_key_path = base_dir + '/' + self.config['default']['private_key_path']
         self.keys['client']['public'] = parser.parse_key(public_key_path)
         self.keys['client']['private'] = parser.parse_key(private_key_path)
 

@@ -24,8 +24,8 @@ class Server:
         self.parse_keys()
 
     def parse_keys(self):
-        public_key_path = base_dir + '/server/' + self.config['default']['public_key_path']
-        private_key_path = base_dir + '/server/' + self.config['default']['private_key_path']
+        public_key_path = base_dir + '/' + self.config['default']['public_key_path']
+        private_key_path = base_dir + '/' + self.config['default']['private_key_path']
         self.keys['public'] = parser.parse_key(public_key_path)
         self.keys['private'] = parser.parse_key(private_key_path)
 
