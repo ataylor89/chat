@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from client import base_dir
 from client.cmdlist import cmdlist
 from shared import packet_types
