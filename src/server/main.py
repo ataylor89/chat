@@ -1,10 +1,9 @@
-from server import base_dir
+from server import config_path
 from server.server import Server
 from configparser import ConfigParser
 
 def main():
     config = ConfigParser()
-    config_path = base_dir + '/server/config/server_settings.ini'
     config.read(config_path)
     server = Server(config)
     server.listen()

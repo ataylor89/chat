@@ -1,11 +1,10 @@
-from client import base_dir
+from client import config_path
 from client.client import Client
 from client.gui import GUI
 from configparser import ConfigParser
 
 def main():
     config = ConfigParser()
-    config_path = base_dir + '/client/config/client_settings.ini'
     config.read(config_path)
     cli = Client(config)
     gui = GUI(config)
