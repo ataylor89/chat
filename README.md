@@ -250,7 +250,7 @@ The first step is to open Terminal. Then I type the following commands in Termin
 
     # Create an RSA key of length 64, which means that the RSA key consists of 64 (n, e, d) tuples
     # Also, stipulate that the keys used are based on primes less than 10,000
-    # Write to a file named custom_key_client.xt
+    # Write to a file named custom_key_client.txt
     % python keygen.py 64 -tmax 1e4 -o custom_key_client.txt
 
     # The last key was for the client
