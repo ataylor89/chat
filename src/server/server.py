@@ -2,7 +2,7 @@ from server import base_dir
 from server.client import Client
 from server.client_registry import ClientRegistry
 from server.key_manager import KeyManager
-from server.user_database import UserDatabase
+from server.user_manager import UserManager
 from shared import packet_types
 from shared.packet_io import PacketIO
 from shared.rsa import parser
@@ -18,7 +18,7 @@ class Server:
         self.port = int(config['socket']['port'])
         self.packetIO = PacketIO(config)
         self.packetIO.open_log()
-        self.users = UserDatabase()
+        self.users = UserManager()
         self.users.load()
         self.clients = ClientRegistry()
         self.keys = KeyManager(config)

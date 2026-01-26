@@ -3,7 +3,7 @@ from shared import sha256
 import os
 import pickle
 
-class UserDatabase:
+class UserManager:
     def __init__(self):
         self.users = {}
 
