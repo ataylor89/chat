@@ -166,9 +166,11 @@ If you run "/whoami" in both chat windows, you can see that the chat clients hav
 
 Let's draw a diagram.
 
+```
 Client socket                                                                         Server socket  
 IP address: 127.0.0.1 ------------------------- connection -------------------------  IP address: 127.0.0.1  
 Port: ad hoc port                                                                     Port: 12345
+```
 
 You can see that a connection is defined by two sockets, and a socket is defined by an IP address and a port.
 
