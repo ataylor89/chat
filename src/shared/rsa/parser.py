@@ -1,11 +1,11 @@
 def parse_key(path):
-    key = {'public': [], 'private': []}
+    key_pair = {'public': [], 'private': []}
     file = open(path, "r")
     for line in file:
         tokens = line.split()
-        key['public'].append((int(tokens[0][2:]), int(tokens[1][2:])))
-        key['private'].append((int(tokens[0][2:]), int(tokens[2][2:])))
-    return key
+        key_pair['public'].append((int(tokens[0][2:]), int(tokens[1][2:])))
+        key_pair['private'].append((int(tokens[0][2:]), int(tokens[2][2:])))
+    return key_pair
 
 def decode(str):
     key = []
