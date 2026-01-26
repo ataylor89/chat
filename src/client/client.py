@@ -16,8 +16,8 @@ class Client:
         self.config = config
         self.packetIO = PacketIO(config)
         self.packetIO.open_log()
-        self.host = config['default']['host']
-        self.port = int(config['default']['port'])
+        self.host = config['socket']['host']
+        self.port = int(config['socket']['port'])
         self.sock = None
         self.connected = False
         self.encryption = False

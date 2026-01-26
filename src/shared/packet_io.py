@@ -10,8 +10,8 @@ class PacketIO:
     def open_log(self):
         if self.logger and not self.logger.closed:
             self.logger.close()
-        filename = self.config['default']['logfile']
-        mode = self.config['default']['logmode']
+        filename = self.config['log']['logfile']
+        mode = self.config['log']['logmode']
         self.logger = open(filename, mode)
 
     def close_log(self):

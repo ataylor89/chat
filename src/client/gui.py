@@ -5,7 +5,7 @@ class GUI(tk.Tk):
     def __init__(self, config):
         tk.Tk.__init__(self)
         self.config = config
-        self.title(config['default']['title'])
+        self.title(config['gui']['title'])
         self.resizable(False, False)
         self.protocol('WM_DELETE_WINDOW', self.handle_close)
         self.app_is_closing = False
@@ -15,10 +15,10 @@ class GUI(tk.Tk):
         self.client = client
 
     def create_widgets(self):
-        bgcolor = self.config['default']['bg']
-        fgcolor = self.config['default']['fg']
-        fontname = self.config['default']['fontname']
-        fontsize = int(self.config['default']['fontsize'])
+        bgcolor = self.config['gui']['bg']
+        fgcolor = self.config['gui']['fg']
+        fontname = self.config['gui']['fontname']
+        fontsize = int(self.config['gui']['fontsize'])
         self.frame = tk.Frame(self)
         self.frame.pack(fill='both', expand=True)
         self.chat_ta = ScrolledText(self.frame,

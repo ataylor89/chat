@@ -8,7 +8,7 @@ class KeyManager(dict):
         self.config = config
 
     def load(self):
-        key_path = base_dir + '/' + self.config['default']['keypath']
+        key_path = base_dir + '/' + self.config['rsa']['keypath']
         key_pair = parser.parse_key(key_path)
         self['client'] = key_pair
         self['server'] = {'public': None}

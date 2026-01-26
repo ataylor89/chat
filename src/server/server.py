@@ -14,8 +14,8 @@ import threading
 class Server:
     def __init__(self, config):
         self.config = config
-        self.host = config['default']['host']
-        self.port = int(config['default']['port'])
+        self.host = config['socket']['host']
+        self.port = int(config['socket']['port'])
         self.packetIO = PacketIO(config)
         self.packetIO.open_log()
         self.users = UserDatabase()
