@@ -28,14 +28,11 @@ class Server:
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen()
-        client_id = 1
         while True:
             client_socket, client_address = self.server_socket.accept()
-            client = Client(client_id, client_socket, client_address)
-            self.clients.add_client(client)
+            client_id = self.clients.add_client(client_socket, client_address)
             thread = threading.Thread(target=self.readloop, args=(client_id,))
             thread.start()
-            client_id += 1
 
     def readloop(self, client_id):
         client = self.clients[client_id]
