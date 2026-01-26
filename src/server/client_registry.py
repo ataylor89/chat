@@ -20,8 +20,9 @@ class ClientRegistry(dict):
 
     def add_client(self, client_socket, client_address):
         client_id = self.first_available_client_id()
-        self[client_id] = Client(client_id, client_socket, client_address)
-        return client_id
+        client = Client(client_id, client_socket, client_address)
+        self[client_id] = client
+        return client
 
     def remove_client(self, client_id):
         if client_id in self:
