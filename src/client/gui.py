@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter.scrolledtext import ScrolledText
 
 class GUI(tk.Tk):
+
     def __init__(self, config):
         tk.Tk.__init__(self)
         self.config = config

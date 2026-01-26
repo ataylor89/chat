@@ -4,6 +4,7 @@ import os
 import pickle
 
 class UserManager:
+
     def __init__(self):
         self.users = {}
 

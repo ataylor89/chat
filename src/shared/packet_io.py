@@ -3,6 +3,7 @@ from shared.rsa import encrypt, decrypt, parser, util
 from datetime import datetime
 
 class PacketIO:
+
     def __init__(self, config):
         self.config = config
         self.logger = None

@@ -12,6 +12,7 @@ import socket
 import threading
 
 class Server:
+
     def __init__(self, config):
         self.config = config
         self.host = config['socket']['host']

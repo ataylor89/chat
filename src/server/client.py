@@ -1,4 +1,5 @@
 class Client:
+
     def __init__(self, client_id, client_socket, client_address):
         self.client_id = client_id
         self.client_socket = client_socket

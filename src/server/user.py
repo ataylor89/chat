@@ -1,6 +1,7 @@
 from datetime import datetime
 
 class User:
+
     def __init__(self, username, salt, password_hash):
         self.username = username
         self.salt = salt
