@@ -232,3 +232,138 @@ I think that's all for now.
 I might add more to this readme later.
 
 For example, I plan to write a section on generating a custom RSA key.
+
+## Generating a custom RSA key
+
+I use the code in my [rsa](https://github.com/ataylor89/rsa) project to generate a custom RSA key.
+
+The first step is to open Terminal. Then I type the following commands in Terminal.
+
+    # Navigate to the directory of the rsa project
+    % cd ~/Github/rsa
+
+    # Generate a prime table consisting of 10,000 primes
+    % python primetable.py 1e4
+
+    # Create 128 RSA keys from this prime table, with the condition that p and q are beneath 10,000
+    % python keytable.py 128 -tmax 1e4
+
+    # Create an RSA key of length 64, which means that the RSA key consists of 64 (n, e, d) tuples
+    # Also, stipulate that the keys used are based on primes less than 10,000
+    # Write to a file named custom_key_client.xt
+    % python keygen.py 64 -tmax 1e4 -o custom_key_client.txt
+
+    # The last key was for the client
+    # Now we will do the same for the server, using the same parameters
+    % python keygen.py 64 -tmax 1e4 -o custom_key_server.txt
+
+I wanted to explain each command in comments. Here are the commands, without comments.
+
+    % cd ~/Github/rsa
+    % python primetable.py 1e4
+    % python keytable.py 128 -tmax 1e4
+    % python keygen.py 64 -tmax 1e4 -o custom_key_client.txt
+    % python keygen.py 64 -tmax 1e4 -o custom_key_server.txt
+
+After completing these steps, we have created a custom RSA key for the client, and another custom RSA key for the server.
+
+We can copy these keys into the rsa folder, within the chat project, with the following commands.
+
+    % cd ~/Github/rsa
+
+    % ls custom_key*
+    custom_key_client.txt	custom_key_server.txt
+
+    % cp custom_key_client.txt ~/Github/chat/src/client/rsa/customkey.txt
+
+    % cp custom_key_server.txt ~/Github/chat/src/server/rsa/customkey.txt
+
+    % ls ~/Github/chat/src/client/rsa
+    customkey.txt	defaultkey.txt
+
+    % ls ~/Github/chat/src/server/rsa
+    customkey.txt	defaultkey.txt
+
+We just copied the client's custom key into the client's rsa folder, and the server's custom key into the server's rsa folder.
+
+Now we have to edit the configuration files so they point to the custom key.
+
+The rsa section of my client/config/client_settings.ini file looks like this:
+
+    [rsa]
+    keypath = rsa/customkey.txt
+
+Similarly, the rsa section of my server/config/server_settings.ini file looks like this:
+
+    [rsa]
+    keypath = rsa/customkey.txt
+
+Okay, I think that's all the changes we have to make.
+
+To review, the steps we took are the following:
+
+1. We navigated to the ~/Github/rsa folder to use the scripts in that folder
+2. We used primetable.py, keytable.py, and keygen.py to create custom RSA keys for the client and the server
+3. We copied the client's custom key into the client's rsa folder
+4. We copied the server's custom key into the server's rsa folder
+5. We edited client/config/client_settings.ini and server/config/server_settings.ini to point to the custom key files
+
+After completing these steps, I tested the chat server with two chat clients, using the custom RSA keys that we generated.
+
+It works like a charm. All we did was simply swap the default key with the custom key, for the client and the server.
+
+This way, the public and private keys are secret. (If we use the default key, they're not secret.)
+
+One of the main ideas behind public key cryptography is this...
+
+If your public key gets discovered, when it is being sent over a network, the message is still secure, because the person who discovers it needs to derive the private key in order to decrypt the message.
+
+If you use a large public key, with large p and q values, then it is hard to derive the private key. It is a difficult problem, computationally, when the p and q values are large enough. It is hard to factor large numbers, and it is even harder to derive the decryption exponent given the modulus.
+
+That's the nice thing about public key cryptography.
+
+What if you used symmetric key cryptography, instead of public key (asymmetric) cryptography?
+
+What if you used an XOR algorithm to encrypt your messages?
+
+If you use a symmetric key algorithm like XOR, and your key gets discovered, then it can be used to decrypt your messages.
+
+This is why public key cryptography is so useful.
+
+If your key gets discovered, it is still really hard to decrypt the message.
+
+The chat client sends its public key to the server, but it keeps its private key a secret.
+
+The private key stays on the local machine, and doesn't leave the local machine.
+
+The public key is used to encrypt messages, and the private key is used to decrypt messages.
+
+To be more specific...
+
+The client uses the server's public key to encrypt messages that it sends to the server.
+
+The server uses the server's private key to decrypt messages that it receives from the client.
+
+The server uses the client's public key to encrypt messages that it sends to the client.
+
+The client uses the client's private key to decrypt messages that it receives from the server.
+
+This is how public key cryptography works.
+
+When the client connects, the client and server create a secure connection, by exchanging public keys.
+
+The process of exchanging public keys is often called an RSA handshake.
+
+The handshake itself is unencrypted... because we need to exchange public keys before we create an encrypted connection.
+
+But everything after the handshake is encrypted.
+
+I wanted to take some time to talk about public key cryptography.
+
+I find cryptography to be a fascinating subject.
+
+I believe that the RSA encryption algorithm is used in the SSH and HTTPS protocols. This makes it a widely used algorithm.
+
+I think that wraps up this section...
+
+It's a lot to process, but I wanted to explain the encryption mechanism in detail.
