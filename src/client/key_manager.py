@@ -8,9 +8,7 @@ class KeyManager(dict):
         self.config = config
 
     def load(self):
-        public_key_path = base_dir + '/' + self.config['default']['public_key_path']
-        private_key_path = base_dir + '/' + self.config['default']['private_key_path']
-        self['client'] = {}
-        self['client']['public'] = parser.parse_key(public_key_path)
-        self['client']['private'] = parser.parse_key(private_key_path)
+        key_path = base_dir + '/' + self.config['default']['keypath']
+        key_pair = parser.parse_key(key_path)
+        self['client'] = key_pair
         self['server'] = {'public': None}
