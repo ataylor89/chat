@@ -65,6 +65,7 @@ class GUI(tk.Tk):
 
     def add_message(self, message):
         self.chat_ta.insert(tk.END, message)
+        self.chat_ta.see(tk.END)
 
     def clear_userlist(self):
         self.userlist_lb.delete(0, tk.END)
