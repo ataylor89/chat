@@ -37,7 +37,7 @@ class Client:
         while not done:
             try:
                 decryption_key = self.keys['client']['private']
-                packet = self.packetIO.read_packet(self.sock, key=decryption_key, use_encryption=self.encryption)
+                packet = self.packetIO.read_packet(self.sock, key=decryption_key, encryption=self.encryption)
                 if packet:
                     self.process(packet)
             except socket.error as e:
@@ -82,7 +82,7 @@ class Client:
         client_public_key = self.keys['client']['public']
         packet_body = parser.encode(client_public_key)
         encryption_key = self.keys['server']['public']
-        self.packetIO.write_packet(self.sock, packet_types.EXCHANGE_PUBLIC_KEYS, packet_body, key=encryption_key, use_encryption=self.encryption)
+        self.packetIO.write_packet(self.sock, packet_types.EXCHANGE_PUBLIC_KEYS, packet_body, key=encryption_key, encryption=self.encryption)
 
     def connect(self, host, port):
         if self.connected:
@@ -97,7 +97,7 @@ class Client:
             while not self.encryption:
                 time.sleep(0.005) # 5 milliseconds
             encryption_key = self.keys['server']['public']
-            self.packetIO.write_packet(self.sock, packet_types.CONNECT, None, key=encryption_key, use_encryption=self.encryption)
+            self.packetIO.write_packet(self.sock, packet_types.CONNECT, None, key=encryption_key, encryption=self.encryption)
         except Exception as e:
             print(e)
 
@@ -105,7 +105,7 @@ class Client:
         if not self.connected:
             return
         encryption_key = self.keys['server']['public']
-        self.packetIO.write_packet(self.sock, packet_types.DISCONNECT, None, key=encryption_key, use_encryption=self.encryption, callback=callback)
+        self.packetIO.write_packet(self.sock, packet_types.DISCONNECT, None, key=encryption_key, encryption=self.encryption, callback=callback)
 
     def disconnect(self):
         self.gui.add_message('Disconnected from the server\n')
@@ -119,46 +119,46 @@ class Client:
             return
         message = username + ':' + password
         encryption_key = self.keys['server']['public']
-        self.packetIO.write_packet(self.sock, packet_types.REGISTER, message, key=encryption_key, use_encryption=self.encryption)
+        self.packetIO.write_packet(self.sock, packet_types.REGISTER, message, key=encryption_key, encryption=self.encryption)
 
     def login(self, username, password):
         if not self.encryption:
             return
         message = username + ':' + password
         encryption_key = self.keys['server']['public']
-        self.packetIO.write_packet(self.sock, packet_types.LOGIN, message, key=encryption_key, use_encryption=self.encryption)
+        self.packetIO.write_packet(self.sock, packet_types.LOGIN, message, key=encryption_key, encryption=self.encryption)
 
     def logout(self):
         if not self.logged_in:
             return
         encryption_key = self.keys['server']['public']
-        self.packetIO.write_packet(self.sock, packet_types.LOGOUT, None, key=encryption_key, use_encryption=self.encryption)
+        self.packetIO.write_packet(self.sock, packet_types.LOGOUT, None, key=encryption_key, encryption=self.encryption)
 
     def send_message(self, message):
         if not self.encryption:
             return
         encryption_key = self.keys['server']['public']
-        self.packetIO.write_packet(self.sock, packet_types.MESSAGE, message, key=encryption_key, use_encryption=self.encryption)
+        self.packetIO.write_packet(self.sock, packet_types.MESSAGE, message, key=encryption_key, encryption=self.encryption)
 
     def whoami(self):
         if not self.encryption:
             return
         encryption_key = self.keys['server']['public']
-        self.packetIO.write_packet(self.sock, packet_types.WHOAMI, None, key=encryption_key, use_encryption=self.encryption)
+        self.packetIO.write_packet(self.sock, packet_types.WHOAMI, None, key=encryption_key, encryption=self.encryption)
 
     def get_date(self):
         if not self.encryption:
             return
         encryption_key = self.keys['server']['public']
         tz_name = tzlocal.get_localzone_name()
-        self.packetIO.write_packet(self.sock, packet_types.DATE, tz_name, key=encryption_key, use_encryption=self.encryption)
+        self.packetIO.write_packet(self.sock, packet_types.DATE, tz_name, key=encryption_key, encryption=self.encryption)
 
     def get_time(self):
         if not self.encryption:
             return
         encryption_key = self.keys['server']['public']
         tz_name = tzlocal.get_localzone_name()
-        self.packetIO.write_packet(self.sock, packet_types.TIME, tz_name, key=encryption_key, use_encryption=self.encryption)
+        self.packetIO.write_packet(self.sock, packet_types.TIME, tz_name, key=encryption_key, encryption=self.encryption)
 
     def exit(self):
         if self.sock:
