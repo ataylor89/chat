@@ -5,6 +5,7 @@ class PacketLog:
     def __init__(self, config):
         self.config = config
         self.enabled = config['log']['enabled']
+        self.logger = None
         if self.enabled:
             self.open_log()
 
