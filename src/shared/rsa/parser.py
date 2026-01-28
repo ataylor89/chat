@@ -1,4 +1,4 @@
-from shared.exceptions import KeyFileError
+from shared.rsa.exceptions import KeyFileError
 
 def parse_key(path):
     keypair = {'public': [], 'private': []}
