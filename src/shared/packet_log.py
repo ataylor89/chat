@@ -23,7 +23,7 @@ class PacketLog:
         stem = path.stem
         suffix = path.suffix
 
-        while path.is_file():
+        while path.is_file() and id <= 100:
             filename = f'{stem}-{id}' + suffix
             path = project_root / 'logs' / directory / filename
             id += 1
