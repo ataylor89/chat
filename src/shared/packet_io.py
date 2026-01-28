@@ -1,4 +1,4 @@
-from shared import packet_utils
+from shared import project_root, packet_utils
 from shared.rsa import encrypt, decrypt, parser, util
 from datetime import datetime
 
@@ -11,9 +11,9 @@ class PacketIO:
     def open_log(self):
         if self.logger and not self.logger.closed:
             self.logger.close()
-        filename = self.config['log']['logfile']
+        path = project_root / 'logs' / self.config['log']['logfile']
         mode = self.config['log']['logmode']
-        self.logger = open(filename, mode)
+        self.logger = open(path, mode)
 
     def close_log(self):
         if self.logger and not self.logger.closed:

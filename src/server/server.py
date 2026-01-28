@@ -1,4 +1,3 @@
-from server import base_dir
 from server.client import Client
 from server.client_registry import ClientRegistry
 from server.key_manager import KeyManager

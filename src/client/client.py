@@ -1,4 +1,3 @@
-from client import base_dir
 from client.cmdlist import cmdlist
 from client.key_manager import KeyManager
 from shared import packet_types

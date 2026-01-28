@@ -1,5 +1,5 @@
-import sys
+from pathlib import Path
 
-base_dir = sys.path[0] + '/server'
-config_path = base_dir + '/config/server_settings.ini'
+project_root = Path(__file__).parent.parent.parent
+config_path = project_root / 'config' / 'server' / 'settings.ini'
 max_connections = 1000

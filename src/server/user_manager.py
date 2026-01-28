@@ -1,3 +1,4 @@
+from server import project_root
 from server.user import User
 from shared import sha256
 import os
@@ -8,13 +9,15 @@ class UserManager:
     def __init__(self):
         self.users = {}
 
-    def load(self, path='users.pickle'):
+    def load(self):
+        path = project_root / 'database' / 'users.pickle'
         if os.path.exists(path):
             with open(path, 'rb') as file:
                 self.users.clear()
                 self.users.update(pickle.load(file))
 
-    def save(self, path='users.pickle'):
+    def save(self):
+        path = project_root / 'database' / 'users.pickle'
         with open(path, 'wb') as file:
             pickle.dump(self.users, file)
 

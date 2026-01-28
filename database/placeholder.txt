@@ -1,0 +1,2 @@
+This is a placeholder file.
+The user database should be written to this folder.

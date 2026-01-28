@@ -1,4 +1,4 @@
-from client import base_dir
+from client import project_root
 from shared.rsa import parser
 
 class KeyManager(dict):
@@ -8,7 +8,7 @@ class KeyManager(dict):
         self.config = config
 
     def load(self):
-        key_path = base_dir + '/' + self.config['rsa']['keypath']
+        key_path = project_root / 'rsa' / 'client' / self.config['rsa']['keyfile']
         key_pair = parser.parse_key(key_path)
         self['client'] = key_pair
         self['server'] = {'public': None}
