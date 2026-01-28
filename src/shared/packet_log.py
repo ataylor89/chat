@@ -4,7 +4,7 @@ class PacketLog:
 
     def __init__(self, config):
         self.config = config
-        self.enabled = config['log']['enabled']
+        self.enabled = config.getboolean('log', 'enabled')
         self.logger = None
         if self.enabled:
             try:
