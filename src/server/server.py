@@ -17,7 +17,6 @@ class Server:
         self.host = config['socket']['host']
         self.port = int(config['socket']['port'])
         self.packetIO = PacketIO(config)
-        self.packetIO.open_log()
         self.users = UserManager()
         self.users.load()
         self.clients = ClientRegistry()

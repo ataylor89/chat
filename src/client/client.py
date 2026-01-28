@@ -14,7 +14,6 @@ class Client:
     def __init__(self, config):
         self.config = config
         self.packetIO = PacketIO(config)
-        self.packetIO.open_log()
         self.host = config['socket']['host']
         self.port = int(config['socket']['port'])
         self.sock = None
