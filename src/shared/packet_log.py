@@ -14,10 +14,10 @@ class PacketLog:
                 print(err)
 
     def open_log(self):
-        filename = self.config['log']['filename']
-        directory = self.config['log']['directory']
+        filename = self.config.get('log', 'filename')
+        mode = self.config.get('log', 'mode')
+        directory = self.config.get('log', 'directory')
         path = project_root / 'logs' / directory / filename
-        mode = self.config['log']['mode']
 
         id = 1
         stem = path.stem
