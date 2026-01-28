@@ -14,7 +14,7 @@ class PacketLog:
         path = project_root / 'logs' / directory / filename
         mode = self.config['log']['mode']
 
-        id = 2
+        id = 1
         stem = path.stem
         suffix = path.suffix
 
