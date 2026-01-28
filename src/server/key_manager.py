@@ -8,6 +8,6 @@ class KeyManager(dict):
         self.config = config
 
     def load(self):
-        key_path = project_root / 'rsa' / 'server' / self.config['rsa']['keyfile']
+        key_path = project_root / 'keys' / 'server' / self.config['rsa']['keyfile']
         key_pair = parser.parse_key(key_path)
         self.update(key_pair)
