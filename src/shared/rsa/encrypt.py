@@ -1,8 +1,8 @@
 from shared.rsa import parser, util
 
 def encrypt(msg, key):
-    ciphertext = ""
-    codes = msg.encode("utf-8")
+    ciphertext = ''
+    codes = list(map(lambda x: ord(x), msg))
     keylen = len(key)
     for i in range(0, len(codes)):
         (n, e) = key[i % keylen]

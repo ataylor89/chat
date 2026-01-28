@@ -9,7 +9,7 @@ def power_mod_n(base, expo, n):
     return res
 
 def encode(num, size):
-    str = ""
+    str = ''
     for i in range(0, size):
         str += chr(num & 0xFF)
         num = num >> 8
