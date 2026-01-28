@@ -28,7 +28,7 @@ class UserManager:
         self.save()
         return True
 
-    def attempt_login(self, username, password):
+    def login(self, username, password):
         if username not in self.users or self.users[username].logged_in:
             return False
         user = self.users[username]

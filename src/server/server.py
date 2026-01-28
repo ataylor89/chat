@@ -159,7 +159,7 @@ class Server:
         tokens = packet[5:packet_len].decode('utf-8').split(':', 1)
         username = tokens[0]
         password = tokens[1] 
-        if not client.logged_in and self.users.attempt_login(username, password):
+        if not client.logged_in and self.users.login(username, password):
             client.username = username
             client.logged_in = True
             login_packet = format('Server: %s logged in as %s\n' %(client_name, username))
