@@ -1,2 +1,0 @@
-This is a placeholder file.
-The client and server logs should be written to this directory.

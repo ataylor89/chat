@@ -1,0 +1,2 @@
+This is a placeholder file.
+The server logs should be written to this directory.

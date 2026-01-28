@@ -1,0 +1,2 @@
+This is a placeholder file.
+The client logs should be written to this directory.

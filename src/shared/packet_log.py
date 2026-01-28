@@ -9,9 +9,10 @@ class PacketLog:
             self.open_log()
 
     def open_log(self):
-        filename = self.config['log']['logfile']
-        path = project_root / 'logs' / filename
-        mode = self.config['log']['logmode']
+        filename = self.config['log']['filename']
+        directory = self.config['log']['directory']
+        path = project_root / 'logs' / directory / filename
+        mode = self.config['log']['mode']
 
         id = 2
         stem = path.stem
@@ -19,7 +20,7 @@ class PacketLog:
 
         while path.is_file():
             filename = f'{stem}-{id}' + suffix
-            path = project_root / 'logs' / filename
+            path = project_root / 'logs' / directory / filename
             id += 1
    
         try:
