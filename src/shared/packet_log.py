@@ -7,7 +7,11 @@ class PacketLog:
         self.enabled = config['log']['enabled']
         self.logger = None
         if self.enabled:
-            self.open_log()
+            try:
+                self.open_log()
+            except Exception as err:
+                self.enabled = False
+                print(err)
 
     def open_log(self):
         filename = self.config['log']['filename']
@@ -24,11 +28,7 @@ class PacketLog:
             path = project_root / 'logs' / directory / filename
             id += 1
    
-        try:
-            self.logger = open(path, mode)
-        except Exception as err:
-            self.enabled = False
-            print(err)
+        self.logger = open(path, mode)
 
     def write(self, message):
         if self.enabled:
