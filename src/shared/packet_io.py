@@ -1,6 +1,6 @@
 from shared import packet_utils
 from shared.packet_log import PacketLog
-from shared.rsa import encrypt, decrypt, parser, util
+from shared.rsa import encrypt, decrypt, util
 from datetime import datetime
 
 class PacketIO:
